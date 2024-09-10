@@ -3,6 +3,7 @@
 #include "clause.h"
 #include "solveGeneral.hpp"
 #include "solveCadicalClass.hpp"
+#include "incr_minCheck.h"
 #include <omp.h>
 #include <fstream>
 #include <sstream>
@@ -16,6 +17,7 @@ int timelimit = -1;
 clock_t startOfSolving;
 bool allModels = false;
 bool diagPart = false;
+bool incrMincheck = false;
 int fixedRow = 0;
 int numToFix = 0;
 bool parallel = false;
@@ -31,6 +33,7 @@ bool minCheckOld = false;
 bool useBit = false;
 bool useRange = false;
 bool noCommander = false;
+bool test = false;
 int logging = 0;
 
 string solOutput = "";
@@ -48,6 +51,19 @@ int main(int argc, char const **argv)
     // argument parsing
     for (int i = 1; i < argc; i++)
     {
+
+        if (strcmp("--test", argv[i]) == 0)
+            {
+                test = true;
+                continue;
+            }
+
+        if (strcmp("--incr", argv[i]) == 0)
+            {
+                incrMincheck = true;
+                continue;
+            }
+
         if (strcmp("--allModels", argv[i]) == 0)
         {
             allModels = true;
@@ -249,6 +265,26 @@ int main(int argc, char const **argv)
     for(int i=0; i<problem_size; i++)
         t+=i;
     t*=problem_size;
+
+    if(test){
+        IncrMinCheck mc = IncrMinCheck();
+        cycle_set_t cycset = cycle_set_t(problem_size,mc.cycset_lits);
+        for(int i=0;i<problem_size;i++){
+            for(int j=0;j<problem_size;j++){
+                cycset.matrix[i][j]=j;
+            }
+        }
+        bool res = mc.solve();
+        if(res){
+            printf("DID IT\n");
+            vector<int> perm = mc.extractPerm();
+            for(int i=0;i<problem_size;i++){
+                printf("%d->%d\n",i,perm[i]);
+            }
+        }
+        else
+            printf("UNSAT");
+    }
 
     if(!diagPart){
 

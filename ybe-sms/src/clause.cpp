@@ -366,3 +366,135 @@ void unfixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow,
     }
     cnf->push_back(cl);
 }
+
+void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits){
+    //Encode original matrix and its permutation
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (i==k))
+                    continue;
+                cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //Encode original matrix and its permutation
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (i==k))
+                    continue;
+                perm_cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //Encode possible permutations
+    for(int i=0; i<problem_size;i++)
+        for(int j=0;j<problem_size;j++)
+            perm_lits[i][j]=nextFree++;
+
+    //Add constraints
+    
+    for(int i=0; i<problem_size; i++)
+        for(int j=0; j<problem_size; j++){
+            if(i!=j){
+                exactlyOne(cnf, cycset_lits[i][j], nextFree);
+                exactlyOne(cnf, perm_cycset_lits[i][j], nextFree);
+            }
+        }
+
+    for(int i=0; i<problem_size; i++)
+        for(int k=0; k<problem_size; k++)
+        {
+            if(i==k)
+                continue;
+            vector<int> to_encode;
+            vector<int> to_encode_p;
+            for(int j=0; j<problem_size; j++){
+                if(i==j)
+                    continue;
+                to_encode.push_back(cycset_lits[i][j][k]);
+                to_encode_p.push_back(perm_cycset_lits[i][j][k]);
+                
+            }
+            exactlyOne(cnf,to_encode,nextFree);
+            exactlyOne(cnf,to_encode_p,nextFree);
+        }
+
+    for(int i=0; i<problem_size;i++){
+        exactlyOne(cnf,perm_lits[i],nextFree);
+        vector<int> to_encode;
+        for(int j=0; j<problem_size; j++){
+            to_encode.push_back(perm_lits[j][i]);
+        }
+        exactlyOne(cnf,to_encode,nextFree);
+    }
+
+    vector<int> to_encode = vector<int>{};
+    for(int i=0; i<problem_size;i++){
+        to_encode.push_back(-perm_lits[i][i]);
+    }
+    cnf->push_back(to_encode);
+
+    //Encode relation between og cycle set and its permutation
+    for(int ogcol=0; ogcol<problem_size; ogcol++){
+        for(int pmcol=0; pmcol<problem_size;pmcol++){
+            for(int ogrow=0; ogrow<problem_size; ogrow++){
+                if(ogcol==ogrow)
+                    continue;
+                for(int pmrow=0;pmrow<problem_size;pmrow++){
+                    if(pmrow==pmcol)
+                        continue;
+                    for(int val=0;val<problem_size;val++){
+                        if(val==pmrow)
+                            continue;
+                        for(int pmval=0;pmval<problem_size;pmval++){
+                            if(pmval==ogrow)
+                                continue;
+                            clause_t cl={
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                -perm_cycset_lits[ogrow][ogcol][pmval]
+                                };
+                            cnf->push_back(cl);
+                            cl={
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                -cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                perm_cycset_lits[ogrow][ogcol][pmval]
+                                };
+                            cnf->push_back(cl);
+                        }   
+                    }
+                }
+            }
+        }
+    }
+
+    //Force permutation to be smaller using SBC
+    int auxprev=0;
+    int aux = nextFree++;
+    clause_t cl={aux};
+    cnf->push_back(cl);
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col++){
+            if(row==col)
+                continue;
+            for(int val=problem_size-1;val>=0;val--){
+                if(val==row)
+                    continue;
+                auxprev=aux;
+                aux=nextFree++;
+                cnf->push_back({-auxprev,cycset_lits[row][col][val],-perm_cycset_lits[row][col][val]});
+                if((row!=problem_size-1) || (col!=problem_size-2) || (val!=0)){
+                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                    cnf->push_back({aux,-auxprev,-perm_cycset_lits[row][col][val]});
+                } else {
+                    cnf->push_back({-auxprev,cycset_lits[row][col][val]});
+                    cnf->push_back({-auxprev,-perm_cycset_lits[row][col][val]});
+                }
+            }
+        }
+    }
+}

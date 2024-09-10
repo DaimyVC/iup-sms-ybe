@@ -46,10 +46,13 @@ bool CommonInterface::checkMin(bool final)
       break;
   }
   
-  if(fullDefined)
+  if(fullDefined){
+    mincheck->complete=true;
     mincheck->final=true;
-  else
+  } else {
+    mincheck->complete=false;
     mincheck->final=final;
+  }
 
   bool failed=false;
   

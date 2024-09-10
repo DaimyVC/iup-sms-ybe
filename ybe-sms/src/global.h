@@ -14,6 +14,8 @@ extern int maxMC;
 extern bool doFinalCheck;
 extern bool useBit;
 extern int logging;
+extern bool incrMincheck;
+
 
 #define COUNT_ASSIGNED 0
 #define ESTIMATE_SPACE 1

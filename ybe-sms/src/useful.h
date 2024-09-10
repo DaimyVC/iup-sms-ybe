@@ -81,7 +81,10 @@ public:
 class pperm_plain : public pperm_common
 {
 public:
+    std::vector<int> element;
+    std::vector<bool> part;
     shared_ptr<pperm_common> copyPerm();
+    
     int permOf(int p);
     vector<int> options(int p);
     vector<int> invOptions(int p);
@@ -90,8 +93,6 @@ public:
     bool fix(int p, int pp);
     void print();
     bool fullDefined();
-    std::vector<int> element;
-    std::vector<bool> part;
     vector<int> getPerm();
     pperm_plain(std::vector<int> perm);
     pperm_plain();
@@ -101,11 +102,9 @@ public:
 class pperm_bit : public pperm_common
 {
 public:
-    pperm_bit(vector<int> perm);
-    pperm_bit();
-    ~pperm_bit();
     bitdomains2_t info;
     shared_ptr<pperm_common> copyPerm();
+
     int permOf(int p);
     vector<int> options(int p);
     vector<int> invOptions(int p);
@@ -115,6 +114,9 @@ public:
     void print();
     bool fullDefined();
     vector<int> getPerm();
+    pperm_bit(vector<int> perm);
+    pperm_bit();
+    ~pperm_bit();
 };
 
 typedef struct cyclePerm_t{
