@@ -220,7 +220,7 @@ cyclePerm_t::cyclePerm_t(){ };
 
 cyclePerm_t::cyclePerm_t(vector<int> perm){
   auto cycles = permToCyclePerm(perm);
-
+  diag=perm;
   int index = 0;
   for(auto cyc : cycles){
     bool first=true;
@@ -272,7 +272,7 @@ vector<int> cyclePerm_t::cycle(int el){
 }
 
 int cyclePerm_t::permOf(int el){
-  if(el+1>problem_size || part[el+1]>0){
+  if(el+1>=problem_size || part[el+1]>0){
     for(int i = el; i>=0; i--){
       if(part[i]>0){
         return element[i];

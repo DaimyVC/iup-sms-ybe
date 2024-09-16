@@ -11,6 +11,8 @@ extern int problem_size;
 extern int checkFreq;
 extern int maxDepth;
 extern int maxMC;
+extern int limDec;
+extern int limCon;
 extern bool doFinalCheck;
 extern bool useBit;
 extern int logging;

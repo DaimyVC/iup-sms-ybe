@@ -9,7 +9,7 @@ target_link_libraries(ybe_sms PRIVATE OpenMP::OpenMP_CXX)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp") 
 
-target_compile_options(ybe_sms PRIVATE "-Wall" "-Wextra" "-pedantic" "-O3")
+target_compile_options(ybe_sms PRIVATE "-Wall" "-Wextra" "-pedantic" "-O0")
 
 
 add_executable(diag_maker "main_diagMaker.cpp" "useful.cpp" "domains.cpp")

@@ -15,20 +15,37 @@ class IncrMinCheck
 {
 public:
     IncrMinCheck();
-    bool solve(cycle_set_t &assump);
+    IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId);
+    bool solvePartial(cycle_set_t &assump);
+    bool solveComplete(cycle_set_t &assump);
     bool solve();
-    vector<vector<vector<lit_t>>> cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
-    vector<int> extractPerm();
+    vector<int> extractPartialPerm();
+    vector<int> extractCompletePerm();
 
 private:
-    CaDiCaL::Solver *solver;
-    vector<vector<int>> lit2entry;
-    int highestOgCycsetVar;
-    int highestPermCycsetVar;
-    int highestPermVar;
-    cnf_t cnf;
-    int nextFreeVariable = 1;
-    vector<vector<vector<lit_t>>> perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
-    vector<vector<lit_t>> perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
+    cyclePerm_t diag;
+    shared_ptr<pperm_common> initialPart;
+    bool isId;
 
+    CaDiCaL::Solver *partialSolver;
+    vector<vector<int>> part_lit2entry;
+    int part_highestOgCycsetVar;
+    int part_highestPermCycsetVar;
+    int part_highestPermVar;
+    cnf_t part_cnf;
+    int part_nextFreeVariable = 1;
+    vector<vector<vector<lit_t>>> part_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<vector<lit_t>>> part_perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<lit_t>> part_perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
+    
+    CaDiCaL::Solver *completeSolver;
+    vector<vector<int>> comp_lit2entry;
+    int comp_highestOgCycsetVar;
+    int comp_highestPermCycsetVar;
+    int comp_highestPermVar;
+    cnf_t comp_cnf;
+    int comp_nextFreeVariable = 1;
+    vector<vector<vector<lit_t>>> comp_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<vector<lit_t>>> comp_perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<lit_t>> comp_perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
 };

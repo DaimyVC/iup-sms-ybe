@@ -367,32 +367,26 @@ void unfixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow,
     cnf->push_back(cl);
 }
 
-void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits){
-    //Encode original matrix and its permutation
+void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+    //Encode original matrix
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++){
-                if((i==j) || (i==k))
+                if((i==j) || (diag.diag[i]==k))
                     continue;
                 cycset_lits[i][j][k] = nextFree++;
             }
 
-    //Encode original matrix and its permutation
+    //Encode permuted matrix
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++){
-                if((i==j) || (i==k))
+                if((i==j) || (diag.diag[i]==k))
                     continue;
                 perm_cycset_lits[i][j][k] = nextFree++;
             }
-
-    //Encode possible permutations
-    for(int i=0; i<problem_size;i++)
-        for(int j=0;j<problem_size;j++)
-            perm_lits[i][j]=nextFree++;
-
-    //Add constraints
     
+    //Each cell can only contain one element
     for(int i=0; i<problem_size; i++)
         for(int j=0; j<problem_size; j++){
             if(i!=j){
@@ -400,11 +394,11 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
                 exactlyOne(cnf, perm_cycset_lits[i][j], nextFree);
             }
         }
-
+    //Each row in matrix can only contain unique elements
     for(int i=0; i<problem_size; i++)
         for(int k=0; k<problem_size; k++)
         {
-            if(i==k)
+            if(diag.diag[i]==k)
                 continue;
             vector<int> to_encode;
             vector<int> to_encode_p;
@@ -419,6 +413,24 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
             exactlyOne(cnf,to_encode_p,nextFree);
         }
 
+    //Encode possible permutations
+    if(isId){
+        for(int i=0; i<problem_size;i++)
+            for(int j=0;j<problem_size;j++)
+                perm_lits[i][j]=nextFree++;
+    } else {
+        for(int i=0; i<problem_size;i++)
+            for(int j : initialPart->options(i))
+                perm_lits[i][j]=nextFree++;
+    }
+
+    vector<int> to_encode = vector<int>{};
+    for(int i=0; i<problem_size;i++){
+        to_encode.push_back(-perm_lits[i][i]);
+    }
+    cnf->push_back(to_encode);
+
+    //permutation should be well-defined
     for(int i=0; i<problem_size;i++){
         exactlyOne(cnf,perm_lits[i],nextFree);
         vector<int> to_encode;
@@ -428,26 +440,52 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
         exactlyOne(cnf,to_encode,nextFree);
     }
 
-    vector<int> to_encode = vector<int>{};
-    for(int i=0; i<problem_size;i++){
-        to_encode.push_back(-perm_lits[i][i]);
-    }
-    cnf->push_back(to_encode);
+    //exclude impossible permutations if diagonal is not the identity
+    if(!isId){
+        for(int og=0; og<problem_size; og++){
+            auto cycle_og = diag.cycle(og);
+            for(int img : initialPart->options(og)){
+                if(og==img){
+                    for(int i=1; i<cycle_og.size(); i++){
+                        if(cycle_og[i]==og)
+                            continue;
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                    }
+                } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
+                    
+                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
 
+                    int size = cycle_og.size();
+                    for(int i=1; i<size; i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
+                    }
+                } else { 
+                    auto cycle_perm = diag.cycle(img);
+                    int size = cycle_og.size();
+                    for(int i=1; i<size;i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
+                    }
+                }
+            }
+        }
+    }
+    
     //Encode relation between og cycle set and its permutation
+
+    //als niet id sluit uit wa nie kan
     for(int ogcol=0; ogcol<problem_size; ogcol++){
-        for(int pmcol=0; pmcol<problem_size;pmcol++){
+        for(int pmcol:initialPart->options(ogcol)){
             for(int ogrow=0; ogrow<problem_size; ogrow++){
                 if(ogcol==ogrow)
                     continue;
-                for(int pmrow=0;pmrow<problem_size;pmrow++){
+                for(int pmrow:initialPart->options(ogrow)){
                     if(pmrow==pmcol)
                         continue;
                     for(int val=0;val<problem_size;val++){
-                        if(val==pmrow)
+                        if(val==diag.diag[pmrow])
                             continue;
-                        for(int pmval=0;pmval<problem_size;pmval++){
-                            if(pmval==ogrow)
+                        for(int pmval:initialPart->invOptions(val)){
+                            if(pmval==diag.diag[ogrow])
                                 continue;
                             clause_t cl={
                                 -perm_lits[ogcol][pmcol],
@@ -482,7 +520,7 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
             if(row==col)
                 continue;
             for(int val=problem_size-1;val>=0;val--){
-                if(val==row)
+                if(val==diag.diag[row])
                     continue;
                 auxprev=aux;
                 aux=nextFree++;
@@ -497,4 +535,213 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
             }
         }
     }
+}
+
+void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+    matrixLits_t min_vars=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    matrixLits_t max_vars=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    
+    //Encode original matrix
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (diag.diag[i]==k))
+                    continue;
+                cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //Encode permuted matrix
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (diag.diag[i]==k))
+                    continue;
+                perm_cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //Encode possible permutations
+    if(isId){
+        for(int i=0; i<problem_size;i++)
+            for(int j=0;j<problem_size;j++)
+                perm_lits[i][j]=nextFree++;
+    } else {
+        for(int i=0; i<problem_size;i++)
+            for(int j : initialPart->options(i))
+                perm_lits[i][j]=nextFree++;
+    }
+    
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (diag.diag[i]==k))
+                    continue;
+                min_vars[i][j][k]=nextFree++;
+                max_vars[i][j][k] = nextFree++;
+            }
+
+    vector<int> to_encode = vector<int>{};
+    for(int i=0; i<problem_size;i++){
+        to_encode.push_back(-perm_lits[i][i]);
+    }
+    cnf->push_back(to_encode);
+
+    //permutation should be well-defined
+    for(int i=0; i<problem_size;i++){
+        exactlyOne(cnf,perm_lits[i],nextFree);
+        vector<int> to_encode;
+        for(int j=0; j<problem_size; j++){
+            to_encode.push_back(perm_lits[j][i]);
+        }
+        exactlyOne(cnf,to_encode,nextFree);
+    }
+
+    //exclude impossible permutations if diagonal is not the identity
+    if(!isId){
+        for(int og=0; og<problem_size; og++){
+            auto cycle_og = diag.cycle(og);
+            for(int img : initialPart->options(og)){
+                if(og==img){
+                    for(int i=1; i<cycle_og.size(); i++){
+                        if(cycle_og[i]==og)
+                            continue;
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                    }
+                } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
+                    
+                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
+
+                    int size = cycle_og.size();
+                    for(int i=1; i<size; i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
+                    }
+                } else { 
+                    auto cycle_perm = diag.cycle(img);
+                    int size = cycle_og.size();
+                    for(int i=1; i<size;i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
+                    }
+                }
+            }
+        }
+    }
+    
+    //Encode relation between og cycle set and its permutation
+    for(int ogcol=0; ogcol<problem_size; ogcol++){
+        for(int pmcol:initialPart->options(ogcol)){
+            for(int ogrow=0; ogrow<problem_size; ogrow++){
+                if(ogcol==ogrow)
+                    continue;
+                for(int pmrow:initialPart->options(ogrow)){
+                    if(pmrow==pmcol)
+                        continue;
+                    for(int val=0;val<problem_size;val++){
+                        if(val==diag.diag[pmrow])
+                            continue;
+                        for(int pmval:initialPart->invOptions(val)){
+                            if(pmval==diag.diag[ogrow])
+                                continue;
+                            clause_t cl={
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                -perm_cycset_lits[ogrow][ogcol][pmval]
+                                };
+                            cnf->push_back(cl);
+                            cl={
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                -cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                perm_cycset_lits[ogrow][ogcol][pmval]
+                                };
+                            cnf->push_back(cl);
+                        }   
+                    }
+                }
+            }
+        }
+    }
+
+    //Encode min variables for og matrix
+    //minijk <=> ogijk en -ogijl (l<k)
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col ++){
+            if(row==col)
+                continue;
+
+            int prevaux=0;
+            int aux=nextFree++;
+            cnf->push_back(vector<int>({aux}));
+            for(int k=0;k<problem_size;k++){
+                if(k==diag.diag[row])
+                    continue;
+                prevaux=aux;
+                aux=nextFree++;
+                cnf->push_back(vector<int>({-aux,prevaux}));
+                cnf->push_back(vector<int>({-aux,-cycset_lits[row][col][k]}));
+                cnf->push_back(vector<int>({-prevaux,cycset_lits[row][col][k],aux}));
+                cnf->push_back(vector<int>({-prevaux,-cycset_lits[row][col][k],min_vars[row][col][k]}));
+                cnf->push_back(vector<int>({-min_vars[row][col][k],prevaux}));
+                cnf->push_back(vector<int>({-min_vars[row][col][k],cycset_lits[row][col][k]}));
+            }
+        }
+    }
+
+    //Encode max variables for perm matrix
+    //minijk <=> (l>k) -pijl en pijk
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col ++){
+            if(row==col)
+                continue;
+
+            int prevaux=0;
+            int aux=nextFree++;
+            cnf->push_back(vector<int>({aux}));
+            for(int k=problem_size-1;k>=0;k--){
+                if(k==diag.diag[row])
+                    continue;
+                prevaux=aux;
+                aux=nextFree++;
+                cnf->push_back(vector<int>({-aux,prevaux}));
+                cnf->push_back(vector<int>({-aux,-perm_cycset_lits[row][col][k]}));
+                cnf->push_back(vector<int>({-prevaux,perm_cycset_lits[row][col][k],aux}));
+                cnf->push_back(vector<int>({-prevaux,-perm_cycset_lits[row][col][k],max_vars[row][col][k]}));
+                cnf->push_back(vector<int>({-max_vars[row][col][k],prevaux}));
+                cnf->push_back(vector<int>({-max_vars[row][col][k],perm_cycset_lits[row][col][k]}));
+            }
+        }
+    }
+
+    //Force permutation to be smaller using SBC
+    int auxprev=0;
+    int aux = nextFree++;
+    int numAdded=0;
+    clause_t cl={aux};
+    cnf->push_back(cl);
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col++){
+            if(row==col)
+                continue;
+            for(int val=problem_size-1;val>=0;val--){
+                if(val==diag.diag[row])
+                    continue;
+                auxprev=aux;
+                aux=nextFree++;
+                cnf->push_back({-auxprev,min_vars[row][col][val],-max_vars[row][col][val]});
+                numAdded+=1;
+                if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=0)) && (numAdded<maxMC)){
+                    cnf->push_back({aux,-auxprev,min_vars[row][col][val]});
+                    cnf->push_back({aux,-auxprev,-max_vars[row][col][val]});
+                } else {
+                    cnf->push_back({-auxprev,min_vars[row][col][val]});
+                    cnf->push_back({-auxprev,-max_vars[row][col][val]});
+                    goto end;
+                }
+            }
+        }
+    }
+
+    end:
+        return;
 }

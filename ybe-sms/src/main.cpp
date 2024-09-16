@@ -35,6 +35,8 @@ bool useRange = false;
 bool noCommander = false;
 bool test = false;
 int logging = 0;
+int limDec = -1;
+int limCon = -1;
 
 string solOutput = "";
 bool saveState = false;
@@ -81,6 +83,20 @@ int main(int argc, char const **argv)
         {
             i++;
             problem_size = atoi(argv[i]);
+            continue;
+        }
+
+        if (strcmp("--limDec", argv[i]) == 0 || strcmp("-s", argv[i]) == 0)
+        {
+            i++;
+            limDec = atoi(argv[i]);
+            continue;
+        }
+
+        if (strcmp("--limCon", argv[i]) == 0 || strcmp("-s", argv[i]) == 0)
+        {
+            i++;
+            limCon = atoi(argv[i]);
             continue;
         }
 
@@ -266,7 +282,7 @@ int main(int argc, char const **argv)
         t+=i;
     t*=problem_size;
 
-    if(test){
+    /* if(test){
         IncrMinCheck mc = IncrMinCheck();
         cycle_set_t cycset = cycle_set_t(problem_size,mc.cycset_lits);
         for(int i=0;i<problem_size;i++){
@@ -284,7 +300,7 @@ int main(int argc, char const **argv)
         }
         else
             printf("UNSAT");
-    }
+    } */
 
     if(!diagPart){
 

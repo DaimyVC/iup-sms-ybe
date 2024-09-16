@@ -12,7 +12,7 @@
 class MinCheck_V2 : public MinCheckCommon
 {
 public:
-    MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits);
+    //MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits);
     MinCheck_V2();
     MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits);
     void checkMinimality(shared_ptr<pperm_common> perm, int r, int d);

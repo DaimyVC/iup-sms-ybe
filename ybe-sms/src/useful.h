@@ -122,7 +122,7 @@ public:
 typedef struct cyclePerm_t{
     std::vector<int> element;
     std::vector<int> part;
-
+    std::vector<int> diag;
     cyclePerm_t(std::vector<int> perm);
     cyclePerm_t();
     int permOf(int p);

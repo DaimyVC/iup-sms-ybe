@@ -3,7 +3,7 @@
 #include<queue>
 #include<iterator>
 
-MinCheck_V2::MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits){
+/* MinCheck_V2::MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits){
     this->cycset=cycle_set_t(problem_size,cycset_lits);
     this->cycset=cycset;
     this->cycset_lits=cycset_lits;
@@ -17,7 +17,7 @@ MinCheck_V2::MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycse
     if(diagIsId){
         incrMinChecker=IncrMinCheck();
     }
-}
+} */
 
 MinCheck_V2::MinCheck_V2(){
     return;
@@ -25,13 +25,13 @@ MinCheck_V2::MinCheck_V2(){
 
 MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits){
     this->cycset_lits=cycset_lits;
-    
     diagIsId=true;
     if(diagPart){
         this->diag=cyclePerm_t(diag);
         for(int i=0; i<problem_size; i++){
-            if(this->diag.permOf(i)!=i)
+            if(this->diag.permOf(i)!=i){
                 diagIsId=false;
+            }
         }
     }
     if(useBit && diagPart)
@@ -43,6 +43,9 @@ MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_
         iota(initPerm.begin(),initPerm.end(),0); 
         initialPart = make_shared<pperm_plain>(pperm_plain(initPerm));
     }
+    if(incrMincheck){
+        incrMinChecker=IncrMinCheck(this->diag,initialPart,diagIsId);
+    }
 }
 
 
@@ -53,12 +56,20 @@ void MinCheck_V2::MinCheck(cycle_set_t cycset){
         printDomains(cycset);
     }
     this->cycset=cycset;
-    //setCycleSet(cycset);    
-    if(diagIsId && complete && incrMincheck){
-        if(incrMinChecker.solve(cycset)){
-            vector<int> witness = incrMinChecker.extractPerm();
-            permFullyDefinedCheck(witness,0,1);
+    //setCycleSet(cycset);
+    if(incrMincheck){
+        if(complete){
+            if(incrMinChecker.solveComplete(cycset)){
+                vector<int> witness = incrMinChecker.extractCompletePerm();
+                permFullyDefinedCheck(witness,0,1);
+            }
+        } else {
+            if(incrMinChecker.solvePartial(cycset)){
+                vector<int> witness = incrMinChecker.extractPartialPerm();
+                permFullyDefinedCheck(witness,0,1);
+            }
         }
+        
     } else {
         this->its=0;
         checkMinimality(initialPart, 0,0);
