@@ -48,4 +48,9 @@ private:
     vector<vector<vector<lit_t>>> comp_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
     vector<vector<vector<lit_t>>> comp_perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
     vector<vector<lit_t>> comp_perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
+
+    vector<vector<vector<lit_t>>> complete_cycset_lits;
+    vector<vector<vector<lit_t>>> complete_perm_cycset_lits;
+    vector<vector<lit_t>> complete_perm_lits;
+    CaDiCaL::Solver *comp_Solver;
 };

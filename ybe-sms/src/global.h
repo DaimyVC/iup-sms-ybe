@@ -17,6 +17,7 @@ extern bool doFinalCheck;
 extern bool useBit;
 extern int logging;
 extern bool incrMincheck;
+extern bool allPart;
 
 
 #define COUNT_ASSIGNED 0

@@ -471,8 +471,6 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
     }
     
     //Encode relation between og cycle set and its permutation
-
-    //als niet id sluit uit wa nie kan
     for(int ogcol=0; ogcol<problem_size; ogcol++){
         for(int pmcol:initialPart->options(ogcol)){
             for(int ogrow=0; ogrow<problem_size; ogrow++){
@@ -487,22 +485,20 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
                         for(int pmval:initialPart->invOptions(val)){
                             if(pmval==diag.diag[ogrow])
                                 continue;
-                            clause_t cl={
+                            cnf->push_back({
                                 -perm_lits[ogcol][pmcol],
                                 -perm_lits[ogrow][pmrow],
                                 cycset_lits[pmrow][pmcol][val],
                                 -perm_lits[pmval][val],
                                 -perm_cycset_lits[ogrow][ogcol][pmval]
-                                };
-                            cnf->push_back(cl);
-                            cl={
+                                });
+                            cnf->push_back({
                                 -perm_lits[ogcol][pmcol],
                                 -perm_lits[ogrow][pmrow],
                                 -cycset_lits[pmrow][pmcol][val],
                                 -perm_lits[pmval][val],
                                 perm_cycset_lits[ogrow][ogcol][pmval]
-                                };
-                            cnf->push_back(cl);
+                                });
                         }   
                     }
                 }
@@ -525,7 +521,7 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
                 auxprev=aux;
                 aux=nextFree++;
                 cnf->push_back({-auxprev,cycset_lits[row][col][val],-perm_cycset_lits[row][col][val]});
-                if((row!=problem_size-1) || (col!=problem_size-2) || (val!=0)){
+                if((row!=problem_size-1) || (col!=problem_size-2) || (val!= (diag.diag[problem_size-1]==0?1:0))){
                     cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                     cnf->push_back({aux,-auxprev,-perm_cycset_lits[row][col][val]});
                 } else {
@@ -538,8 +534,10 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
 }
 
 void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
-    matrixLits_t min_vars=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
-    matrixLits_t max_vars=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    
+    matrixLits_t smaller2=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    matrixLits_t larger2=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    
     
     //Encode original matrix
     for (int i = 0; i < problem_size; i++)
@@ -569,15 +567,6 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
             for(int j : initialPart->options(i))
                 perm_lits[i][j]=nextFree++;
     }
-    
-    for (int i = 0; i < problem_size; i++)
-        for (int j = 0; j < problem_size; j++)
-            for (int k = 0; k < problem_size; k++){
-                if((i==j) || (diag.diag[i]==k))
-                    continue;
-                min_vars[i][j][k]=nextFree++;
-                max_vars[i][j][k] = nextFree++;
-            }
 
     vector<int> to_encode = vector<int>{};
     for(int i=0; i<problem_size;i++){
@@ -640,22 +629,20 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                         for(int pmval:initialPart->invOptions(val)){
                             if(pmval==diag.diag[ogrow])
                                 continue;
-                            clause_t cl={
+                            cnf->push_back({
                                 -perm_lits[ogcol][pmcol],
                                 -perm_lits[ogrow][pmrow],
                                 cycset_lits[pmrow][pmcol][val],
                                 -perm_lits[pmval][val],
                                 -perm_cycset_lits[ogrow][ogcol][pmval]
-                                };
-                            cnf->push_back(cl);
-                            cl={
+                                });
+                            cnf->push_back({
                                 -perm_lits[ogcol][pmcol],
                                 -perm_lits[ogrow][pmrow],
                                 -cycset_lits[pmrow][pmcol][val],
                                 -perm_lits[pmval][val],
                                 perm_cycset_lits[ogrow][ogcol][pmval]
-                                };
-                            cnf->push_back(cl);
+                                });
                         }   
                     }
                 }
@@ -663,52 +650,40 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
         }
     }
 
-    //Encode min variables for og matrix
-    //minijk <=> ogijk en -ogijl (l<k)
     for(int row=0;row<problem_size;row++){
         for(int col=0;col<problem_size;col ++){
             if(row==col)
                 continue;
-
-            int prevaux=0;
-            int aux=nextFree++;
-            cnf->push_back(vector<int>({aux}));
-            for(int k=0;k<problem_size;k++){
-                if(k==diag.diag[row])
-                    continue;
-                prevaux=aux;
-                aux=nextFree++;
-                cnf->push_back(vector<int>({-aux,prevaux}));
-                cnf->push_back(vector<int>({-aux,-cycset_lits[row][col][k]}));
-                cnf->push_back(vector<int>({-prevaux,cycset_lits[row][col][k],aux}));
-                cnf->push_back(vector<int>({-prevaux,-cycset_lits[row][col][k],min_vars[row][col][k]}));
-                cnf->push_back(vector<int>({-min_vars[row][col][k],prevaux}));
-                cnf->push_back(vector<int>({-min_vars[row][col][k],cycset_lits[row][col][k]}));
+            for(int val=0; val<problem_size;val++){
+                    larger2[row][col][val]=nextFree++;
+                    vector<int> toAdd=vector<int>();
+                    for(int k=0;k<=val;k++){
+                        if(k==diag.diag[row])
+                            continue;
+                        toAdd.push_back(cycset_lits[row][col][k]);
+                        cnf->push_back({-larger2[row][col][val],-cycset_lits[row][col][k]});
+                    }
+                    toAdd.push_back(larger2[row][col][val]);
+                    cnf->push_back(toAdd);
             }
         }
     }
 
-    //Encode max variables for perm matrix
-    //minijk <=> (l>k) -pijl en pijk
     for(int row=0;row<problem_size;row++){
         for(int col=0;col<problem_size;col ++){
             if(row==col)
                 continue;
-
-            int prevaux=0;
-            int aux=nextFree++;
-            cnf->push_back(vector<int>({aux}));
-            for(int k=problem_size-1;k>=0;k--){
-                if(k==diag.diag[row])
-                    continue;
-                prevaux=aux;
-                aux=nextFree++;
-                cnf->push_back(vector<int>({-aux,prevaux}));
-                cnf->push_back(vector<int>({-aux,-perm_cycset_lits[row][col][k]}));
-                cnf->push_back(vector<int>({-prevaux,perm_cycset_lits[row][col][k],aux}));
-                cnf->push_back(vector<int>({-prevaux,-perm_cycset_lits[row][col][k],max_vars[row][col][k]}));
-                cnf->push_back(vector<int>({-max_vars[row][col][k],prevaux}));
-                cnf->push_back(vector<int>({-max_vars[row][col][k],perm_cycset_lits[row][col][k]}));
+            for(int val=0; val<problem_size;val++){
+                    smaller2[row][col][val]=nextFree++;
+                    vector<int> toAdd=vector<int>();
+                    for(int k=val;k<problem_size;k++){
+                        if(k==diag.diag[row])
+                            continue;
+                        toAdd.push_back(perm_cycset_lits[row][col][k]);
+                        cnf->push_back({-smaller2[row][col][val],-perm_cycset_lits[row][col][k]});
+                    }
+                    toAdd.push_back(smaller2[row][col][val]);
+                    cnf->push_back(toAdd);
             }
         }
     }
@@ -728,15 +703,29 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                     continue;
                 auxprev=aux;
                 aux=nextFree++;
-                cnf->push_back({-auxprev,min_vars[row][col][val],-max_vars[row][col][val]});
+                if(val==0){
+                    numAdded+=1;
+                    if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
+                        cnf->push_back({aux,-auxprev,smaller2[row][col][val]});
+                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                    } else {
+                        cnf->push_back({-auxprev,smaller2[row][col][val]});
+                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                        goto end;
+                    }
+                }else{
+                cnf->push_back({-auxprev,larger2[row][col][val-1],cycset_lits[row][col][val],smaller2[row][col][val]});
                 numAdded+=1;
-                if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=0)) && (numAdded<maxMC)){
-                    cnf->push_back({aux,-auxprev,min_vars[row][col][val]});
-                    cnf->push_back({aux,-auxprev,-max_vars[row][col][val]});
+                if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
+                    cnf->push_back({aux,-auxprev,smaller2[row][col][val]});
+                    cnf->push_back({aux,-auxprev,larger2[row][col][val-1]});
+                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                 } else {
-                    cnf->push_back({-auxprev,min_vars[row][col][val]});
-                    cnf->push_back({-auxprev,-max_vars[row][col][val]});
+                    cnf->push_back({-auxprev,smaller2[row][col][val]});
+                    cnf->push_back({-auxprev,larger2[row][col][val-1]});
+                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                     goto end;
+                }
                 }
             }
         }
