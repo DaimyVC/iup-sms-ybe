@@ -21,6 +21,7 @@ bool incrMincheck = false;
 int fixedRow = 0;
 int numToFix = 0;
 bool parallel = false;
+bool allPart = false;
 bool propagateMincheck = false;
 bool oldBreakingClauses = false;
 bool propagateLiteralsCadical = false;
@@ -59,6 +60,12 @@ int main(int argc, char const **argv)
                 test = true;
                 continue;
             }
+
+        if (strcmp("--allPart", argv[i]) == 0)
+        {
+            allPart = true;
+            continue;
+        }
 
         if (strcmp("--incr", argv[i]) == 0)
             {
