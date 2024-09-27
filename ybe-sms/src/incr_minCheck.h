@@ -35,6 +35,7 @@ private:
     cnf_t part_cnf;
     int part_nextFreeVariable = 1;
     vector<vector<vector<lit_t>>> part_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<vector<lit_t>>> part_greater_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
     vector<vector<vector<lit_t>>> part_perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
     vector<vector<lit_t>> part_perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
     

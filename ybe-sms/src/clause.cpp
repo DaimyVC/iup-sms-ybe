@@ -533,10 +533,10 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
     }
 }
 
-void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
     
-    matrixLits_t smaller2=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
-    matrixLits_t larger2=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    matrixLits_t smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    vector<vector<int>> notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
     
     
     //Encode original matrix
@@ -655,15 +655,15 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
             if(row==col)
                 continue;
             for(int val=0; val<problem_size;val++){
-                    larger2[row][col][val]=nextFree++;
+                    larger[row][col][val]=nextFree++;
                     vector<int> toAdd=vector<int>();
                     for(int k=0;k<=val;k++){
                         if(k==diag.diag[row])
                             continue;
                         toAdd.push_back(cycset_lits[row][col][k]);
-                        cnf->push_back({-larger2[row][col][val],-cycset_lits[row][col][k]});
+                        cnf->push_back({-larger[row][col][val],-cycset_lits[row][col][k]});
                     }
-                    toAdd.push_back(larger2[row][col][val]);
+                    toAdd.push_back(larger[row][col][val]);
                     cnf->push_back(toAdd);
             }
         }
@@ -674,15 +674,15 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
             if(row==col)
                 continue;
             for(int val=0; val<problem_size;val++){
-                    smaller2[row][col][val]=nextFree++;
+                    smaller[row][col][val]=nextFree++;
                     vector<int> toAdd=vector<int>();
                     for(int k=val;k<problem_size;k++){
                         if(k==diag.diag[row])
                             continue;
                         toAdd.push_back(perm_cycset_lits[row][col][k]);
-                        cnf->push_back({-smaller2[row][col][val],-perm_cycset_lits[row][col][k]});
+                        cnf->push_back({-smaller[row][col][val],-perm_cycset_lits[row][col][k]});
                     }
-                    toAdd.push_back(smaller2[row][col][val]);
+                    toAdd.push_back(smaller[row][col][val]);
                     cnf->push_back(toAdd);
             }
         }
@@ -706,26 +706,24 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                 if(val==0){
                     numAdded+=1;
                     if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
-                        cnf->push_back({aux,-auxprev,smaller2[row][col][val]});
+                        cnf->push_back({aux,-auxprev,smaller[row][col][val]});
                         cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                     } else {
-                        cnf->push_back({-auxprev,smaller2[row][col][val]});
+                        cnf->push_back({-auxprev,smaller[row][col][val]});
                         cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                         goto end;
                     }
                 }else{
-                cnf->push_back({-auxprev,larger2[row][col][val-1],cycset_lits[row][col][val],smaller2[row][col][val]});
-                numAdded+=1;
-                if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
-                    cnf->push_back({aux,-auxprev,smaller2[row][col][val]});
-                    cnf->push_back({aux,-auxprev,larger2[row][col][val-1]});
-                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
-                } else {
-                    cnf->push_back({-auxprev,smaller2[row][col][val]});
-                    cnf->push_back({-auxprev,larger2[row][col][val-1]});
-                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
-                    goto end;
-                }
+                    cnf->push_back({-auxprev,larger[row][col][val-1],smaller[row][col][val]});
+                    numAdded+=1;
+                    if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
+                        cnf->push_back({aux,-auxprev,smaller[row][col][val]});
+                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                    } else {
+                        cnf->push_back({-auxprev,smaller[row][col][val]});
+                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                        goto end;
+                    }
                 }
             }
         }
@@ -733,4 +731,208 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
 
     end:
         return;
+}
+
+void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+    
+    matrixLits_t smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    vector<vector<int>> notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
+    
+    
+    //Encode original matrix
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (diag.diag[i]==k))
+                    continue;
+                cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //og>x vars
+    for(int row=0; row<problem_size; row++){
+        for(int col=0; col<problem_size; col++){
+            if(row==col)
+                continue;
+            for(int val=0; val<problem_size; val++){
+                larger[row][col][val]=nextFree++;
+                vector<int> toAdd=vector<int>();
+                for(int k=0;k<=val;k++){
+                    if(k==diag.diag[row])
+                        continue;
+                    toAdd.push_back(cycset_lits[row][col][k]);
+                    cnf->push_back({-larger[row][col][val],-cycset_lits[row][col][k]});
+                }
+                toAdd.push_back(larger[row][col][val]);
+                cnf->push_back(toAdd);
+            }
+        }
+    }
+
+    //Encode permuted matrix
+    for (int i = 0; i < problem_size; i++)
+        for (int j = 0; j < problem_size; j++)
+            for (int k = 0; k < problem_size; k++){
+                if((i==j) || (diag.diag[i]==k))
+                    continue;
+                perm_cycset_lits[i][j][k] = nextFree++;
+            }
+
+    //perm<x vars
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col ++){
+            if(row==col)
+                continue;
+            for(int val=0; val<problem_size;val++){
+                smaller[row][col][val]=nextFree++;
+                vector<int> toAdd=vector<int>();
+                for(int k=val;k<problem_size;k++){
+                    if(k==diag.diag[row])
+                        continue;
+                    toAdd.push_back(perm_cycset_lits[row][col][k]);
+                    cnf->push_back({-smaller[row][col][val],-perm_cycset_lits[row][col][k]});
+                }
+                toAdd.push_back(smaller[row][col][val]);
+                cnf->push_back(toAdd);
+            }
+        }
+    }
+
+    //Encode possible permutations
+    if(isId){
+        for(int i=0; i<problem_size;i++)
+            for(int j=0;j<problem_size;j++)
+                perm_lits[i][j]=nextFree++;
+    } else {
+        for(int i=0; i<problem_size;i++)
+            for(int j : initialPart->options(i))
+                perm_lits[i][j]=nextFree++;
+    }
+
+    vector<int> to_encode = vector<int>{};
+    for(int i=0; i<problem_size;i++){
+        to_encode.push_back(-perm_lits[i][i]);
+    }
+    cnf->push_back(to_encode);
+
+    //permutation should be well-defined
+    for(int i=0; i<problem_size;i++){
+        exactlyOne(cnf,perm_lits[i],nextFree);
+        vector<int> to_encode;
+        for(int j=0; j<problem_size; j++){
+            to_encode.push_back(perm_lits[j][i]);
+        }
+        exactlyOne(cnf,to_encode,nextFree);
+    }
+
+    //exclude impossible permutations if diagonal is not the identity
+    if(!isId){
+        for(int og=0; og<problem_size; og++){
+            auto cycle_og = diag.cycle(og);
+            for(int img : initialPart->options(og)){
+                if(og==img){
+                    for(int i=1; i<cycle_og.size(); i++){
+                        if(cycle_og[i]==og)
+                            continue;
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                    }
+                } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
+                    
+                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
+
+                    int size = cycle_og.size();
+                    for(int i=1; i<size; i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
+                    }
+                } else { 
+                    auto cycle_perm = diag.cycle(img);
+                    int size = cycle_og.size();
+                    for(int i=1; i<size;i++){
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
+                    }
+                }
+            }
+        }
+    }
+    
+    //Encode relation between og cycle set and its permutation
+    for(int ogcol=0; ogcol<problem_size; ogcol++){
+        for(int pmcol:initialPart->options(ogcol)){
+            for(int ogrow=0; ogrow<problem_size; ogrow++){
+                if(ogcol==ogrow)
+                    continue;
+                for(int pmrow:initialPart->options(ogrow)){
+                    if(pmrow==pmcol)
+                        continue;
+                    for(int val=0;val<problem_size;val++){
+                        if(val==diag.diag[pmrow])
+                            continue;
+                        for(int pmval:initialPart->invOptions(val)){
+                            if(pmval==diag.diag[ogrow])
+                                continue;
+                            cnf->push_back({
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                -perm_cycset_lits[ogrow][ogcol][pmval]
+                                });
+                            cnf->push_back({
+                                -perm_lits[ogcol][pmcol],
+                                -perm_lits[ogrow][pmrow],
+                                -cycset_lits[pmrow][pmcol][val],
+                                -perm_lits[pmval][val],
+                                perm_cycset_lits[ogrow][ogcol][pmval]
+                                });
+                        }   
+                    }
+                }
+            }
+        }
+    }
+
+    ofstream MyFile("cnfOUT.txt");
+
+    //SBC
+    int prevrow=0;
+    int prevcol=0;
+    notBroken[prevrow][prevcol]=nextFree++;
+    cnf->push_back({notBroken[prevrow][prevcol]});
+    MyFile << "N"<<prevrow<<prevcol<<"\n";
+    for(int r=0;r<problem_size;r++){
+        for(int c=0; c<problem_size; c++){
+            if(r==c)
+                continue;
+
+            notBroken[r][c]=nextFree++;
+            if((r==problem_size-1) && (c==problem_size-2)){
+                for(int v=0; v<problem_size; v++){
+                    if(v!=0){
+                        cnf->push_back({-notBroken[r][c],smaller[r][c][v],larger[r][c][v-1]});
+                        MyFile <<"-N"<<r<<c<<", ";
+                        MyFile <<"l"<<r<<c<<v<<", ";
+                        MyFile <<"g"<<r<<c<<(v-1)<<"\n";
+                    }
+                }
+            } else {
+                for(int v=0; v<problem_size; v++){
+                    if(v!=0&&v!=problem_size-1){
+                        cnf->push_back({-notBroken[r][c],smaller[r][c][v+1],larger[r][c][v-1]});
+                        MyFile <<"-N"<<r<<c<<", ";
+                        MyFile <<"l"<<r<<c<<(v+1)<<", ";
+                        MyFile <<"g"<<r<<c<<(v-1)<<"\n";
+                    }
+                    if(v!=diag.diag[r]){
+                        cnf->push_back({-notBroken[prevrow][prevcol],-cycset_lits[r][c][v],-perm_cycset_lits[r][c][v],notBroken[r][c]});
+                        MyFile <<"-N"<<prevrow<<prevcol<<", ";
+                        MyFile <<"-ogc"<<r<<c<<v<<", ";
+                        MyFile <<"-pmc"<<r<<c<<v<<",";
+                        MyFile <<"N"<<r<<c<<"\n";
+                    }
+                }
+            }
+            prevrow=r;
+            prevcol=c;
+        }
+    }
+    MyFile.close();
 }

@@ -9,8 +9,7 @@ IncrMinCheck::IncrMinCheck(){};
 
 IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
     partialSolver=new CaDiCaL::Solver();
-    
-    if (!partialSolver->configure("sat"))
+    if (!partialSolver->configure("unsat"))
         EXIT_UNWANTED_STATE
     
     this->diag=diag;
@@ -50,7 +49,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
             part_highestPermVar++;
         }
 
-    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,diag,initialPart,isId);
+    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
 
     for (auto clause : part_cnf)
     {
@@ -136,12 +135,18 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
             for(int col=0; col<problem_size;col++){
                 if(row==col)
                     continue;
+                int min = assump.bitdomains[row][col].firstel;
                 for(int val=0; val<problem_size;val++){
                     if(val!=diag.diag[row]){
                         if(!assump.bitdomains[row][col].dom[val])
                             partialSolver->assume(-part_cycset_lits[row][col][val]);
                         else
                             partialSolver->assume(part_cycset_lits[row][col][val]);
+                    }
+                    if(val<min){
+                        partialSolver->assume(part_greater_lits[row][col][val]);
+                    } else {
+                        partialSolver->assume(-part_greater_lits[row][col][val]);
                     }
                 }
             }
@@ -164,6 +169,13 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
                             comp_Solver->assume(complete_cycset_lits[row][col][val]);
                         else
                             comp_Solver->assume(-complete_cycset_lits[row][col][val]);
+                        if(allPart){
+                            if(val<assump.matrix[row][col]){
+                                partialSolver->assume(part_greater_lits[row][col][val]);
+                            } else {
+                                partialSolver->assume(-part_greater_lits[row][col][val]);
+                            }
+                        }
                     }
                 }
             }
