@@ -130,6 +130,9 @@ int main(int argc, char const **argv)
             {
                 i++;
                 checkFreq = atoi(argv[i]);
+                if(checkFreq==0){
+                    checkSolutionInProp=false;
+                }
                 continue;
             }
 
