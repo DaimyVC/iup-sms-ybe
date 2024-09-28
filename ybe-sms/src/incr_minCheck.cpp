@@ -49,7 +49,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
             part_highestPermVar++;
         }
 
-    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
+    findPartialWitness2(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
 
     for (auto clause : part_cnf)
     {

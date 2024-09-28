@@ -906,17 +906,17 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
             notBroken[r][c]=nextFree++;
             if((r==problem_size-1) && (c==problem_size-2)){
                 for(int v=0; v<problem_size; v++){
-                    if(v!=0){
-                        cnf->push_back({-notBroken[r][c],smaller[r][c][v],larger[r][c][v-1]});
-                        MyFile <<"-N"<<r<<c<<", ";
-                        MyFile <<"l"<<r<<c<<v<<", ";
+                    if(v!=0&&v!=problem_size-1){
+                        cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
+                        MyFile <<"-N"<<prevrow<<prevcol<<", ";
+                        MyFile <<"l"<<r<<c<<(v+1)<<", ";
                         MyFile <<"g"<<r<<c<<(v-1)<<"\n";
                     }
                 }
             } else {
                 for(int v=0; v<problem_size; v++){
                     if(v!=0&&v!=problem_size-1){
-                        cnf->push_back({-notBroken[r][c],smaller[r][c][v+1],larger[r][c][v-1]});
+                        cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
                         MyFile <<"-N"<<r<<c<<", ";
                         MyFile <<"l"<<r<<c<<(v+1)<<", ";
                         MyFile <<"g"<<r<<c<<(v-1)<<"\n";
