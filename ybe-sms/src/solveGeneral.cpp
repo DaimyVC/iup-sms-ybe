@@ -104,8 +104,10 @@ bool CommonInterface::checkMin(bool final)
 
   if(fullDefined && !failed && allModels){
     nModels++;
-    fprintf(output,"Solution %d\n", nModels);
-    fprintCycleSet(output, cycset);
+    if(!noEnum){
+      fprintf(output,"Solution %d\n", nModels);
+      fprintCycleSet(output, cycset);
+    }
     vector<lit_t> clause;
     for (int i = 0; i < problem_size; i++)
       for (int j = 0; j < problem_size; j++)
@@ -160,8 +162,11 @@ bool CommonInterface::check()
   cycle_set_t cycset = getCycleSet();
 
   nModels++;
-  fprintf(output,"Solution %d\n", nModels);
-  fprintCycleSet(output, cycset);
+  
+  if(!noEnum){
+    fprintf(output,"Solution %d\n", nModels);
+    fprintCycleSet(output, cycset);
+  }
 
   if (allModels)
   {

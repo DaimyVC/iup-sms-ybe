@@ -18,6 +18,7 @@ extern bool useBit;
 extern int logging;
 extern bool incrMincheck;
 extern bool allPart;
+extern bool noEnum;
 
 
 #define COUNT_ASSIGNED 0

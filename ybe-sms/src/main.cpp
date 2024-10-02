@@ -38,6 +38,7 @@ bool test = false;
 int logging = 0;
 int limDec = -1;
 int limCon = -1;
+bool noEnum = false;
 
 string solOutput = "";
 bool saveState = false;
@@ -58,6 +59,12 @@ int main(int argc, char const **argv)
         if (strcmp("--test", argv[i]) == 0)
             {
                 test = true;
+                continue;
+            }
+
+        if (strcmp("--noEnum", argv[i]) == 0)
+            {
+                noEnum = true;
                 continue;
             }
 
@@ -93,14 +100,14 @@ int main(int argc, char const **argv)
             continue;
         }
 
-        if (strcmp("--limDec", argv[i]) == 0 || strcmp("-s", argv[i]) == 0)
+        if (strcmp("--limDec", argv[i]) == 0)
         {
             i++;
             limDec = atoi(argv[i]);
             continue;
         }
 
-        if (strcmp("--limCon", argv[i]) == 0 || strcmp("-s", argv[i]) == 0)
+        if (strcmp("--limCon", argv[i]) == 0)
         {
             i++;
             limCon = atoi(argv[i]);

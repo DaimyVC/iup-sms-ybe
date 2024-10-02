@@ -17,21 +17,23 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
     // The root-level of the trail is always there
     current_trail.push_back(std::vector<int>());
 
-    string outputFilePath;
-    outputFilePath.append(solOutput);
-    outputFilePath.append("sols_");
-    outputFilePath.append(to_string(problem_size));
-    outputFilePath.append("_");
-    for(auto d : diag)
-        outputFilePath.append(to_string(d));
-    outputFilePath.append(".txt");
+    if(!noEnum){
+        string outputFilePath;
+        outputFilePath.append(solOutput);
+        outputFilePath.append("sols_");
+        outputFilePath.append(to_string(problem_size));
+        outputFilePath.append("_");
+        for(auto d : diag)
+            outputFilePath.append(to_string(d));
+        outputFilePath.append(".txt");
 
-    FILE *fp;
-    fp = fopen(outputFilePath.c_str(),"w");
-    this->output=fp;
+        FILE *fp;
+        fp = fopen(outputFilePath.c_str(),"w");
+        this->output=fp;
+    }
 
     
-    string stateFilePath;
+    /* string stateFilePath;
     string secFilePath;
     string sbcFilePath;
     if(readState || saveState){
@@ -70,7 +72,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
         FILE *sbcfp;
         sbcfp = fopen(sbcFilePath.c_str(),"a+");
         this->sbc=sbcfp;
-    }
+    } */
 
     // only_propagating = false;
     solver = new CaDiCaL::Solver();
@@ -140,7 +142,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
     /* printCycleSet(currentCycleSet);
     printDomains(currentCycleSet); */
 
-    if(readState){
+    /* if(readState){
         ifstream toParse(secFilePath);
         vector<vector<int>> toAdd;
         string temp;
@@ -163,7 +165,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
             }
             printf("\n");
         }
-    }
+    } */
         
     mincheck = new MinCheck_V2(diag,cycset_lits);
 
@@ -216,7 +218,9 @@ void CadicalSolver::solve(vector<int> assumptions)
         //solver->resources();
     } while (solver->solve() == 10);
     solver->statistics();
-    fclose(output);
+    
+    if(!noEnum)
+        fclose(output);
 }
 
 bool CadicalSolver::solve(vector<int>, int)

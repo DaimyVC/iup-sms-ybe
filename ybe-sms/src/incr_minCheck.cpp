@@ -9,7 +9,7 @@ IncrMinCheck::IncrMinCheck(){};
 
 IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
     partialSolver=new CaDiCaL::Solver();
-    if (!partialSolver->configure("unsat"))
+    if (!partialSolver->configure("sat"))
         EXIT_UNWANTED_STATE
     
     this->diag=diag;
@@ -49,7 +49,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
             part_highestPermVar++;
         }
 
-    findPartialWitness2(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
+    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
 
     for (auto clause : part_cnf)
     {
@@ -67,7 +67,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
 
     if(!allPart){
         completeSolver=new CaDiCaL::Solver();
-        if (!completeSolver->configure("sat"))
+        if (!completeSolver->configure("unsat"))
             EXIT_UNWANTED_STATE
 
         comp_lit2entry.push_back(vector<int>{-1,-1,-1});

@@ -890,14 +890,11 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
         }
     }
 
-    ofstream MyFile("cnfOUT.txt");
-
     //SBC
     int prevrow=0;
     int prevcol=0;
     notBroken[prevrow][prevcol]=nextFree++;
     cnf->push_back({notBroken[prevrow][prevcol]});
-    MyFile << "N"<<prevrow<<prevcol<<"\n";
     for(int r=0;r<problem_size;r++){
         for(int c=0; c<problem_size; c++){
             if(r==c)
@@ -908,25 +905,15 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
                 for(int v=0; v<problem_size; v++){
                     if(v!=0&&v!=problem_size-1){
                         cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
-                        MyFile <<"-N"<<prevrow<<prevcol<<", ";
-                        MyFile <<"l"<<r<<c<<(v+1)<<", ";
-                        MyFile <<"g"<<r<<c<<(v-1)<<"\n";
                     }
                 }
             } else {
                 for(int v=0; v<problem_size; v++){
                     if(v!=0&&v!=problem_size-1){
                         cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
-                        MyFile <<"-N"<<r<<c<<", ";
-                        MyFile <<"l"<<r<<c<<(v+1)<<", ";
-                        MyFile <<"g"<<r<<c<<(v-1)<<"\n";
                     }
                     if(v!=diag.diag[r]){
                         cnf->push_back({-notBroken[prevrow][prevcol],-cycset_lits[r][c][v],-perm_cycset_lits[r][c][v],notBroken[r][c]});
-                        MyFile <<"-N"<<prevrow<<prevcol<<", ";
-                        MyFile <<"-ogc"<<r<<c<<v<<", ";
-                        MyFile <<"-pmc"<<r<<c<<v<<",";
-                        MyFile <<"N"<<r<<c<<"\n";
                     }
                 }
             }
@@ -934,5 +921,4 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
             prevcol=c;
         }
     }
-    MyFile.close();
 }
