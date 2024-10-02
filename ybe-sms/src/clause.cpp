@@ -710,7 +710,7 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                         cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                     } else {
                         cnf->push_back({-auxprev,smaller[row][col][val]});
-                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                        cnf->push_back({-auxprev,cycset_lits[row][col][val]});
                         goto end;
                     }
                 }else{
@@ -721,7 +721,7 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                         cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
                     } else {
                         cnf->push_back({-auxprev,smaller[row][col][val]});
-                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                        cnf->push_back({-auxprev,cycset_lits[row][col][val]});
                         goto end;
                     }
                 }
