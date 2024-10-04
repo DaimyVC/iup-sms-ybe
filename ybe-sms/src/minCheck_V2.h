@@ -1,6 +1,7 @@
 #include "useful.h"
 #include<queue>
 #include "minCheckCommon.h"
+#include "incr_minCheck.h"
 
 /**
  * Check if cycle set is minimal and add a clause if this is not the case.
@@ -11,7 +12,7 @@
 class MinCheck_V2 : public MinCheckCommon
 {
 public:
-    MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits);
+    //MinCheck_V2(cycle_set_t cycset, vector<vector<vector<lit_t>>> cycset_lits);
     MinCheck_V2();
     MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits);
     void checkMinimality(shared_ptr<pperm_common> perm, int r, int d);
@@ -24,6 +25,5 @@ private:
     bool propagateDecision(shared_ptr<pperm_common> perm, int r);
     bool fixAndPropagate(shared_ptr<pperm_common> perm, int i, int j);
     shared_ptr<pperm_common> inverseUnkown(shared_ptr<pperm_common> perm, int i, int j);
+    IncrMinCheck incrMinChecker;
 };
-
-bool preCheck(cycle_set_t &cycset, vector<vector<vector<lit_t>>> &cycset_lits);

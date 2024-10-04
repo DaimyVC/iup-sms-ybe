@@ -11,9 +11,15 @@ extern int problem_size;
 extern int checkFreq;
 extern int maxDepth;
 extern int maxMC;
+extern int limDec;
+extern int limCon;
 extern bool doFinalCheck;
 extern bool useBit;
 extern int logging;
+extern bool incrMincheck;
+extern bool allPart;
+extern bool noEnum;
+
 
 #define COUNT_ASSIGNED 0
 #define ESTIMATE_SPACE 1

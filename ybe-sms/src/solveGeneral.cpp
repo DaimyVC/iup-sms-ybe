@@ -16,7 +16,7 @@ bool CommonInterface::propagate()
 
   bool res;
 
-  if ((rand() % checkFreq == 0) && checkSolutionInProp)
+  if (checkSolutionInProp && (rand() % checkFreq == 0))
   {
     res=checkMin(false);
   }
@@ -46,10 +46,13 @@ bool CommonInterface::checkMin(bool final)
       break;
   }
   
-  if(fullDefined)
+  if(fullDefined){
+    mincheck->complete=true;
     mincheck->final=true;
-  else
+  } else {
+    mincheck->complete=false;
     mincheck->final=final;
+  }
 
   bool failed=false;
   
@@ -101,8 +104,10 @@ bool CommonInterface::checkMin(bool final)
 
   if(fullDefined && !failed && allModels){
     nModels++;
-    fprintf(output,"Solution %d\n", nModels);
-    fprintCycleSet(output, cycset);
+    if(!noEnum){
+      fprintf(output,"Solution %d\n", nModels);
+      fprintCycleSet(output, cycset);
+    }
     vector<lit_t> clause;
     for (int i = 0; i < problem_size; i++)
       for (int j = 0; j < problem_size; j++)
@@ -157,8 +162,11 @@ bool CommonInterface::check()
   cycle_set_t cycset = getCycleSet();
 
   nModels++;
-  fprintf(output,"Solution %d\n", nModels);
-  fprintCycleSet(output, cycset);
+  
+  if(!noEnum){
+    fprintf(output,"Solution %d\n", nModels);
+    fprintCycleSet(output, cycset);
+  }
 
   if (allModels)
   {
