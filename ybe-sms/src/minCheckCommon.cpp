@@ -92,8 +92,11 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
                         for(int i=0; i<permVal.size(); i++){
                             if(invpermvals[i]<permVal[i])
                                 addClauses(perm,r,c,oldBreakingClauses);
+                            else if(invpermvals[i]!=permVal[i]){
+                                fixes=-1;
+                                break;
+                            }
                         }
-                        fixes=-1;
                         break;
                     } else if(max==minog){
                         addClauses(perm,r,c,oldBreakingClauses);

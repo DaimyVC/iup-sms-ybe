@@ -34,7 +34,7 @@ bool minCheckOld = false;
 bool useBit = false;
 bool useRange = false;
 bool noCommander = false;
-bool test = false;
+bool newIncr = false;
 int logging = 0;
 int limDec = -1;
 int limCon = -1;
@@ -56,9 +56,9 @@ int main(int argc, char const **argv)
     for (int i = 1; i < argc; i++)
     {
 
-        if (strcmp("--test", argv[i]) == 0)
+        if (strcmp("--newIncr", argv[i]) == 0)
             {
-                test = true;
+                newIncr = true;
                 continue;
             }
 

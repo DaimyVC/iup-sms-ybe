@@ -12,6 +12,3 @@ void fixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow, i
 void unfixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow, int n);
 void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits);
 void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, vector<int> diag);
-void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits,cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId);
-void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits,matrixLits_t &larger,cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId);
-void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits,matrixLits_t &larger,cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId);

@@ -19,6 +19,7 @@ extern int logging;
 extern bool incrMincheck;
 extern bool allPart;
 extern bool noEnum;
+extern bool newIncr;
 
 
 #define COUNT_ASSIGNED 0
