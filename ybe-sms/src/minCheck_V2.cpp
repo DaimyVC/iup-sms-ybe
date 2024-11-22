@@ -66,7 +66,7 @@ void MinCheck_V2::MinCheck(cycle_set_t cycset){
         } else {
             if(incrMinChecker.solvePartial(cycset)){
                 vector<int> witness = incrMinChecker.extractPartialPerm();
-                permFullyDefinedCheck(witness,0,1);
+                permFullyDefinedCheck(witness,0,1); 
             }
         }
         
@@ -199,13 +199,13 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                 if(inv<minog){
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,false);
                 } else if (minOgFixed && inv==minog){
                     options_prop.push_back(copyPerm);
                 } else if (propagateMincheck && inv==minog){
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,true);
                 } 
             } else {
                 vector<int> opt = copyPerm->invOptions(pv);
@@ -214,7 +214,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                     fixAndPropagate(copyPerm,inv,pv);
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,false);
                 } else if (minOgFixed && inv==minog){
                     fixAndPropagate(copyPerm,inv,pv);
                     options_prop.push_back(copyPerm);
@@ -222,7 +222,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                     fixAndPropagate(copyPerm,inv,pv);
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,true);
                 }
             }
 
@@ -239,7 +239,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                         if(iopt[0]<pv){
                             extendPerm(copyPerm);
                             vector<int> p = copyPerm->getPerm();
-                            addClauses(p,0,r,oldBreakingClauses);
+                            addClauses(p,0,r,oldBreakingClauses,false);
                         } else
                             continue;
                     } else {
@@ -248,7 +248,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                             fixAndPropagate(copyPerm,newmin,pv);
                             extendPerm(copyPerm);
                             vector<int> p = copyPerm->getPerm();
-                            addClauses(p,0,r,oldBreakingClauses);
+                            addClauses(p,0,r,oldBreakingClauses,false);
                         } else
                             continue;
                     }
@@ -274,13 +274,13 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                 if(maxel<minog){
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,false);
                 } else if (!propagateMincheck && minog==maxel) {
                     options_prop.push_back(copyPerm);
                 }else if(propagateMincheck && minog==maxel){
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,true);
                 }
                 break;
             } else {
@@ -288,7 +288,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                     fixAndPropagate(copyPerm,maxel,maxi);
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,false);
                 } else if(!propagateMincheck && minog==maxel){
                     fixAndPropagate(copyPerm,maxel,maxi);
                     options_prop.push_back(copyPerm);
@@ -296,7 +296,7 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
                     fixAndPropagate(copyPerm,maxel,maxi);
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();
-                    addClauses(p,0,r,oldBreakingClauses);
+                    addClauses(p,0,r,oldBreakingClauses,true);
                 } 
                 break;
             }

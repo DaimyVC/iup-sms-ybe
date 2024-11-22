@@ -82,9 +82,31 @@ bool CommonInterface::checkMin(bool final)
   catch (vector<clause_t> cs)
   {
     //for(auto c : cs){
-      stats.nSymBreakClauses+=1LL;
+      stats.nClauses+=1LL;
       addClause(cs.front(),true);
     //}
+    res=false;
+    failed=true;
+    if(mincheck->final){
+      auto dur = ((duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
+      stats.FullCheckSuccTime += dur;
+      stats.FullCheckSucc+=1LL;
+    } else {
+      auto dur = ((duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
+      stats.PartCheckSuccTime += dur;
+      stats.PartCheckSucc+=1LL;
+    }
+  }
+  catch (tuple<clause_t,bool> cs)
+  {
+    if(get<1>(cs)){
+      stats.nClauses+=1LL;
+      stats.nPropClauses+=1LL;
+    } else {
+      stats.nSymBreakClauses+=1LL;
+    }
+    addClause(get<0>(cs),true);
+
     res=false;
     failed=true;
     if(mincheck->final){
@@ -198,6 +220,7 @@ void CommonInterface::printStatistics()
   printf("Time in minimality check: %f\n", (stats.timeMinimalityCheck));
   printf("Calls minimality check: %lld\n", (stats.callsFullCheck+stats.callsPartCheck));
   printf("Number of symmetry breaking constraints: %lld\n", stats.nSymBreakClauses);
+  printf("Number of propagation constraints: %lld\n", stats.nPropClauses);
 
   printf("Time in minimality check -- Partial: %f\n", (stats.timePartMinimalityCheck));
   printf("Calls of part check: %lld\n", stats.callsPartCheck);

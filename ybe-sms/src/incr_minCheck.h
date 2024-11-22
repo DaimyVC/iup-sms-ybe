@@ -32,6 +32,8 @@ private:
     void findWitness(cnf_t *cnf, int &nextFree);
     void findPartialWitness(cnf_t *cnf, int &nextFree);
     void findPartialWitnessV2(cnf_t *cnf, int &nextFree);
+    void findPartialWitnessV3(cnf_t *cnf, int &nextFree);
+
 
     vector<vector<vector<lit_t>>> cycset_lits=vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));;
     vector<vector<vector<lit_t>>> perm_cycset_lits=vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));;

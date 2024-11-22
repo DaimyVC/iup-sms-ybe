@@ -58,6 +58,7 @@ int main(int argc, char const **argv)
 
         if (strcmp("--newIncr", argv[i]) == 0)
             {
+                incrMincheck = true;
                 newIncr = true;
                 continue;
             }

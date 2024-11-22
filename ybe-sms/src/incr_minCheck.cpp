@@ -11,6 +11,10 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     partialSolver=new CaDiCaL::Solver();
     if (!partialSolver->configure("sat"))
         EXIT_UNWANTED_STATE
+
+    /* partialSolver->set("lucky", 0);
+    partialSolver->set("walk", 0);
+    partialSolver->set("elim", 0); */
     
     this->diag=diag;
     this->isId=isId;
@@ -56,9 +60,10 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     part_nextFreeVariable=nextFree;
 
     if(newIncr){
-        findPartialWitnessV2(&part_cnf,part_nextFreeVariable);
+        findPartialWitnessV3(&part_cnf,part_nextFreeVariable);
+        //printCnf(&part_cnf);
     } else {
-        findPartialWitness(&part_cnf,part_nextFreeVariable);
+        findPartialWitnessV2(&part_cnf,part_nextFreeVariable);
     }
 
     for (auto clause : part_cnf)
@@ -79,6 +84,10 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
         completeSolver=new CaDiCaL::Solver();
         if (!completeSolver->configure("unsat"))
             EXIT_UNWANTED_STATE
+        
+        /* completeSolver->set("lucky", 0);
+        completeSolver->set("walk", 0);
+        completeSolver->set("elim", 0); */
         
         findWitness(&comp_cnf,comp_nextFreeVariable);
 
@@ -119,9 +128,9 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
                     }
                     if(val==0)
                         continue;
-                    if(val<=min){
+                    if(val<=min && val!=0){
                         partialSolver->assume(largerEQ_lits[row][col][val]);
-                    } else {
+                    } else if (val>min && val!=problem_size-1) {
                         partialSolver->assume(-largerEQ_lits[row][col][val]);
                     }
                 }
@@ -134,6 +143,8 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     }
 
     bool IncrMinCheck::solveComplete(cycle_set_t &assump){
+        /* printf("-----------------------------\n");
+        printCycleSet(assump); */
         for(int row = 0; row<problem_size; row++){
             for(int col=0; col<problem_size;col++){
                 if(row==col)
@@ -142,14 +153,18 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
                     if(val!=diag.diag[row]){
                         if(val==assump.matrix[row][col]){
                             comp_Solver->assume(cycset_lits[row][col][val]);
+                            //printf("%d\n",cycset_lits[row][col][val]);
                         } else {
                             comp_Solver->assume(-cycset_lits[row][col][val]);
+                            //printf("%d\n",-cycset_lits[row][col][val]);
                         }
                         if(allPart && val!=0){
-                            if(val<=assump.matrix[row][col]){
+                            if(val<=assump.matrix[row][col] && val!=0){
                                 comp_Solver->assume(largerEQ_lits[row][col][val]);
-                            } else {
+                                //printf("%d\n",largerEQ_lits[row][col][val]);
+                            } else if(val>assump.matrix[row][col] && val!=problem_size-1){
                                 comp_Solver->assume(-largerEQ_lits[row][col][val]);
+                                //printf("%d\n",-largerEQ_lits[row][col][val]);
                             }
                         }
                     }

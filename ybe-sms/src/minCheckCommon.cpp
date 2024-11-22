@@ -6,11 +6,11 @@
 #include<list>
 #include<iterator>
 
-void MinCheckCommon::addClauses(vector<int> &perm, int r, int c, bool old){
+void MinCheckCommon::addClauses(vector<int> &perm, int r, int c, bool old, bool prop){
     if(old)
         addClauses(perm,r,c);
     else
-        addClausesShort(perm,r,c);
+        addClausesProp(perm,r,c, prop);
 }
 
 bool MinCheckCommon::preCheck(cycle_set_t &cycset, vector<vector<vector<lit_t>>> &cycset_lits){
@@ -45,8 +45,6 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
     if(permIsId(perm))
         return -1;
 
-    
-
     vector<int> invperm = vector<int>(problem_size,-1);
     for(int r=0; r<problem_size; r++)
         invperm[perm[r]]=r;
@@ -62,56 +60,74 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
 
             vector<int> permVal = cycset.bitdomains[perm[r]][perm[c]].options();
 
-            if(permVal.size()==1){
-                int pv=permVal[0];
-                int inv=invperm[pv];
+            if(perm[r]==r && perm[c]==c){
 
-                if(inv<minog){
-                    addClauses(perm,r,c,oldBreakingClauses);
-                } else if (minOgFixed && inv==minog){
-                    continue;
-                } else if(propagateMincheck&&(inv==minog)) {
-                    addClauses(perm,r,c,oldBreakingClauses);
+                if(minOgFixed){
+                    int pv=permVal[0];
+                    int inv=invperm[pv];
+                    if(inv<minog){
+                        addClauses(perm,r,c,oldBreakingClauses,false);
+                    } else if (inv==minog){ 
+                        continue;
+                    } else {
+                        return -1;
+                    };
                 } else {
-                    fixes=-1;
-                    break;
+                    vector<int> invpermvals=vector<int>();
+                    for(auto p : permVal){
+                        invpermvals.push_back(invperm[p]);
+                    }
+                    bool equals=false;
+                    for(int i=0; i<permVal.size(); i++){
+                        if(propagateMincheck && invpermvals[i]<permVal[i]){
+                            addClauses(perm,r,c,oldBreakingClauses,true);
+                        } else if(invpermvals[i]>permVal[i]){
+                            return -1;
+                        } else if(invpermvals[i]==permVal[i]){
+                            equals=true;
+                        }
+                    }
+                    if(!equals){
+                        addClauses(perm,r,c,oldBreakingClauses,false);
+                    }
                 }
             } else {
-                vector<int> invpermvals=vector<int>();
-                for(auto p : permVal){
-                    invpermvals.push_back(invperm[p]);
-                }
-                int max = *max_element(invpermvals.begin(),invpermvals.end());
-                
-                if(max<minog){
-                    addClauses(perm,r,c,oldBreakingClauses);
-                } else if (!propagateMincheck && max<=minog){
-                    continue;
-                } else if(propagateMincheck) {
-                    if(perm[r]==r && perm[c]==c){
-                        for(int i=0; i<permVal.size(); i++){
-                            if(invpermvals[i]<permVal[i])
-                                addClauses(perm,r,c,oldBreakingClauses);
-                            else if(invpermvals[i]!=permVal[i]){
-                                fixes=-1;
-                                break;
-                            }
-                        }
-                        break;
-                    } else if(max==minog){
-                        addClauses(perm,r,c,oldBreakingClauses);
+                if(permVal.size()==1){
+                    int pv=permVal[0];
+                    int inv=invperm[pv];
+
+                    if(inv<minog){
+                        addClauses(perm,r,c,oldBreakingClauses,false);
+                    } else if (minOgFixed && inv==minog){
+                        continue;
+                    } else if(propagateMincheck&&(inv==minog)) {
+                        addClauses(perm,r,c,oldBreakingClauses,true);
                     } else {
-                        fixes=-1;
-                        break;
-                    } 
+                        return -1;
+                    }
                 } else {
-                    fixes=-1;
-                    break;
+                    vector<int> invpermvals=vector<int>();
+                    for(auto p : permVal){
+                        invpermvals.push_back(invperm[p]);
+                    }
+                    int max = *max_element(invpermvals.begin(),invpermvals.end());
+                    
+                    if (max<minog){
+                        addClauses(perm,r,c,oldBreakingClauses,false);
+                    } else if (!propagateMincheck && max<=minog){
+                        continue;
+                    } else if(propagateMincheck) {
+                        if(max==minog){
+                            addClauses(perm,r,c,oldBreakingClauses,true);
+                        } else {
+                            return -1;
+                        } 
+                    }  else {
+                        return -1;
+                    }
                 }
             }
         }
-        if(fixes!=0)
-            break;
     }
     return -1;
 }
@@ -426,6 +442,7 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
             throw cls;
         //ELSE REFINE CYCLE SET
         } else if(permValFixed){
+            printf("pfixed\n");
             vector<int> opts=cycset.bitdomains[r][c].options();
             for(int i=get<1>(permvals.back())+1; i<problem_size;i++){
                 if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
@@ -443,6 +460,7 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
                 }
             }
         } else if(ogFixed) {
+            printf("ofixed\n");
             for(int i=0;i<og;i++){
                 if(diagPart && i==cycset.matrix[r][r])
                     continue;
@@ -470,6 +488,7 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
                 }
             } else {
                 if(og<=get<1>(permvals.back())){
+                    printf("A\n");
                     for(int i=0;i<og;i++){
                         if(diagPart && i==cycset.matrix[r][r])
                             continue;
@@ -486,6 +505,7 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
                         }
                     }
                 } else if(og>=get<1>(permvals.front())) {
+                    printf("B\n");
                     vector<int> opts=cycset.bitdomains[r][c].options();
                     for(int i=get<1>(permvals.back())+1; i<problem_size;i++){
                         if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
@@ -503,6 +523,190 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
                         }
                     }
                 }
+            }
+        }
+}
+
+
+void MinCheckCommon::addClausesProp(vector<int> &perm, int r, int c, bool prop)
+{
+    if(logging>0){
+        printf("ADDING CLAUSES %d %d\n",r,c);
+        for(int i=0;i<problem_size;i++){
+            printf("%d -> %d\n",i,perm[i]);
+        }
+    }
+
+    vector<int> cls=vector<int>();
+    vector<bitdomains2_t> toAdd=vector<bitdomains2_t>(problem_size,bitdomains2_t(false));
+    vector<int> invperm=vector<int>(problem_size,-1);
+        
+
+    for(int i=0; i<problem_size; i++){
+        if(perm[i]!=-1){
+            invperm[perm[i]]=i;
+        }
+    }
+
+
+    for(int ri=0;ri<=r;ri++){
+        for(int ci=0;ci<=problem_size-1;ci++){
+            if(diagPart && ri==ci)
+                continue;
+            if(ri==r && ci==c)
+                goto endloopOld;
+
+            if(perm[ri]!=ri || perm[ci]!=ci){
+                int minog=cycset.matrix[ri][ci];
+                if(minog==-1){
+                    minog = cycset.bitdomains[ri][ci].firstel;
+                }
+
+                vector<int> permvals = vector<int>();
+                for(int pv : cycset.bitdomains[perm[ri]][perm[ci]].options()){
+                    permvals.push_back(invperm[pv]);
+                }
+                int maxperm = *max_element(permvals.begin(),permvals.end());
+
+                for(int i=0; i<minog;i++){
+                    if(diagPart && i==cycset.matrix[ri][ri])
+                        continue;
+                    else if(!cycset.bitdomains[ri][ci].dom[i])
+                        addToClause(ri,ci,i,toAdd);
+                }
+
+                for(int i=maxperm+1; i<problem_size;i++){
+                    if(diagPart && perm[i]==cycset.matrix[perm[ri]][perm[ri]])
+                        continue;
+                    else if(!cycset.bitdomains[perm[ri]][perm[ci]].dom[perm[i]])
+                        addToClause(perm[ri],perm[ci],perm[i],toAdd);
+                }
+            } else {
+                for(int i=0; i<problem_size;i++){
+                    if(diagPart && i==cycset.matrix[ri][ri])
+                        continue;
+                    else if(invperm[i]>i && !cycset.bitdomains[ri][ci].dom[i]){
+                        addToClause(ri,ci,i,toAdd);
+                    }   
+                }
+            }
+        }
+    }
+
+    endloopOld:
+
+        if(r!=perm[r]||c!=perm[c]){
+            if(!prop){
+                ////////////////////////
+                // break unfixed cell //
+                ////////////////////////
+                int minog = cycset.matrix[r][c];
+                if(minog==-1){
+                    minog = cycset.bitdomains[r][c].firstel;
+                }
+                vector<int> permvals = vector<int>();
+                for(int pv : cycset.bitdomains[perm[r]][perm[c]].options()){
+                    permvals.push_back(invperm[pv]);
+                }
+                int maxperm = *max_element(permvals.begin(),permvals.end());
+
+                for(int i=0; i<=maxperm;i++){
+                    if(diagPart && i==cycset.matrix[r][r])
+                        continue;
+                    else if(!cycset.bitdomains[r][c].dom[i])
+                        addToClause(r,c,i,toAdd);
+                }
+
+                for(int i=maxperm+1; i<problem_size;i++){
+                    if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
+                        continue;
+                    else if(!cycset.bitdomains[perm[r]][perm[c]].dom[perm[i]])
+                        addToClause(perm[r],perm[c],perm[i],toAdd);
+                }
+                vector<int> cls = vector<int>();
+                toClause(toAdd,cls);
+                throw tuple<vector<int>,bool>({cls,prop});
+            }else{
+                ////////////////////////
+                // prop  unfixed cell //
+                ////////////////////////
+                int minog = cycset.matrix[r][c];
+                if(minog==-1){
+                    minog = cycset.bitdomains[r][c].firstel;
+                }
+
+                vector<tuple<int,int>> permvals = vector<tuple<int,int>>();
+                for(int pv : cycset.bitdomains[perm[r]][perm[c]].options()){
+                    permvals.push_back(tuple<int,int>({pv,invperm[pv]}));
+                }
+                sort(permvals.begin(), permvals.end(), [](tuple<int,int>a,tuple<int,int>b){return get<1>(a)<=get<1>(b);});
+                int maxperm = get<1>(permvals.back());
+
+                if(permvals.size()!=1){
+                    for(int i=0;i<minog;i++){
+                        if(diagPart && i==cycset.matrix[r][r])
+                            continue;
+                        if(!cycset.bitdomains[r][c].dom[i]){
+                            addToClause(r,c,i,toAdd);
+                        }
+                    }
+                    for(int i=0; i<permvals.size();i++){
+                        if(get<1>(permvals[i])<minog){
+                            addToClause(perm[r],perm[c],get<0>(permvals[i]),toAdd,true);
+                            vector<int> cls = vector<int>();
+                            toClause(toAdd,cls);
+                            throw tuple<vector<int>,bool>({cls,prop});
+                        }
+                    }
+                } else {
+                    vector<int> opts=cycset.bitdomains[r][c].options();
+                    for(int i=maxperm+1; i<problem_size;i++){
+                        if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
+                            continue;
+                        else if(!cycset.bitdomains[perm[r]][perm[c]].dom[perm[i]])
+                            addToClause(perm[r],perm[c],perm[i],toAdd);
+                    }
+                    for(int i=0; i<opts.size();i++){
+                        if(opts[i]>maxperm){
+                            addToClause(r,c,opts[i],toAdd,true);
+                            vector<int> cls = vector<int>();
+                            toClause(toAdd,cls);
+                            throw tuple<vector<int>,bool>({cls,prop});
+                        }
+                    }
+                }
+                
+            }
+        } else {
+            if(!prop){
+                ////////////////////////
+                //  break fixed cell  //
+                ////////////////////////
+                for(int i=0; i<problem_size;i++){
+                    if(diagPart && i==cycset.matrix[r][r])
+                        continue;
+                    else if(invperm[i]>=i && !cycset.bitdomains[r][c].dom[i]){
+                        addToClause(r,c,i,toAdd);
+                    }   
+                }
+                vector<int> cls = vector<int>();
+                toClause(toAdd,cls);
+                throw tuple<vector<int>,bool>({cls,prop});
+            }else{
+                ////////////////////////
+                //  prop fixed cell   //
+                ////////////////////////
+                for(int i=0; i<problem_size;i++){
+                    if(diagPart && i==cycset.matrix[r][r])
+                        continue;
+                    else if(invperm[i]<i && cycset.bitdomains[r][c].dom[i]){
+                        addToClause(r,c,i,toAdd,true);
+                        vector<int> cls = vector<int>();
+                        toClause(toAdd,cls);
+                        throw tuple<vector<int>,bool>({cls,prop});
+                    }   
+                }
+                
             }
         }
 }

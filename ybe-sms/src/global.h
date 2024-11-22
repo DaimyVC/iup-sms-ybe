@@ -43,7 +43,9 @@ typedef struct
     long long PartCheckFail=0;
     double PartCheckSuccTime = 0.0;
     double PartCheckFailTime = 0.0;
+    long long nClauses=0;
     long long nSymBreakClauses=0; // number of symmetry breaking clauses
+    long long nPropClauses=0; // number of symmetry breaking clauses
     long long hyperclauses=0;
 } statistics;
 
