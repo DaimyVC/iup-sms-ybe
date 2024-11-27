@@ -22,6 +22,7 @@ public:
 private:
     void extendPerm(shared_ptr<pperm_common> perm);
     void filterOptions(shared_ptr<pperm_common> perm, vector<int> &options, int r, vector<shared_ptr<pperm_common>> &options_prop);
+    void filterOptions2(shared_ptr<pperm_common> perm, vector<int> &options, int r, vector<shared_ptr<pperm_common>> &options_prop);
     bool propagateDecision(shared_ptr<pperm_common> perm, int r);
     bool fixAndPropagate(shared_ptr<pperm_common> perm, int i, int j);
     shared_ptr<pperm_common> inverseUnkown(shared_ptr<pperm_common> perm, int i, int j);

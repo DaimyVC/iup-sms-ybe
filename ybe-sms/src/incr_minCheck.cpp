@@ -63,7 +63,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
         findPartialWitnessV3(&part_cnf,part_nextFreeVariable);
         //printCnf(&part_cnf);
     } else {
-        findPartialWitnessV2(&part_cnf,part_nextFreeVariable);
+        findPartialWitness(&part_cnf,part_nextFreeVariable);
     }
 
     for (auto clause : part_cnf)
