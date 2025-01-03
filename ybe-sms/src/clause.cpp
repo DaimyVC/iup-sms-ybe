@@ -1,14 +1,12 @@
 #include "clause.h"
-#include "useful.h"
-#include <math.h>
+#include "global.h"
+#include <cmath>
 
-void encodeEntries(cnf_t *cnf, vector<int> d, int &nextFree, matrixLits_t &cycset_lits)
+void encodeEntries(cnf_t *cnf, const vector<int> &d, int &nextFree, matrixLits_t &cycset_lits)
 {   for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++){
-                if(smallerEncoding && i!=j && k!=d[i])
-                    cycset_lits[i][j][k] = nextFree++;
-                else if(!smallerEncoding)
+                if((smallerEncoding && i!=j && k!=d[i]) || !smallerEncoding)
                     cycset_lits[i][j][k] = nextFree++;
             }
     
@@ -45,7 +43,7 @@ void encodeEntries(cnf_t *cnf, vector<int> d, int &nextFree, matrixLits_t &cycse
     }
 }
 
-void encodeOrder(cnf_t *cnf, vector<int> d, int &nextFree, matrixLits_t &cycset_lits_ord, matrixLits_t &cycset_lits)
+void encodeOrder(cnf_t *cnf, const vector<int> &d, int &nextFree, matrixLits_t &cycset_lits_ord, const matrixLits_t &cycset_lits)
 {   for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
         {
@@ -81,7 +79,7 @@ void encodeOrder(cnf_t *cnf, vector<int> d, int &nextFree, matrixLits_t &cycset_
         }
 }
 
-void encodeEntries(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits)
+void encodeEntries(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits)
 {
     for(int i=0; i<problem_size; i++)
         for(int j=0; j<problem_size; j++)
@@ -92,25 +90,27 @@ void encodeEntries(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits)
         {
             vector<int> to_encode;
             //clause_t cl;
+            to_encode.reserve((problem_size));
             for(int j=0; j<problem_size; j++)
                 {
-                    to_encode.push_back(cycset_lits[i][j][k]);
+                    to_encode.emplace_back(cycset_lits[i][j][k]);
                 }
             exactlyOne(cnf,to_encode,nextFree);
         }
 
     for(int i=0; i<problem_size; i++){
         vector<int> to_encode;
+        to_encode.reserve(problem_size);
         for(int k=0; k<problem_size; k++){
-            to_encode.push_back(cycset_lits[k][k][i]);
+            to_encode.emplace_back(cycset_lits[k][k][i]);
         }
         exactlyOne(cnf,to_encode,nextFree);
     }
 }
 
-void exactlyOne(cnf_t *cnf, vector<int> eo, int &nextFree)
+void exactlyOne(cnf_t *cnf, const vector<int>& eo, int &nextFree)
 {
-    vector<int>toEO=vector<int>();
+    auto toEO=vector<int>();
     for(int i : eo){
         if(i!=0)
             toEO.push_back(i);
@@ -122,13 +122,13 @@ void exactlyOne(cnf_t *cnf, vector<int> eo, int &nextFree)
     else
     {
         auto p=commanderEncoding(toEO, nextFree);
-        for(auto cl : p.second)
+        for(const auto& cl : p.second)
             cnf->push_back(cl);
         atLeastOne(cnf, toEO);
     }
 }
 
-void atMostOne(cnf_t *cnf, vector<int> alo)
+void atMostOne(cnf_t *cnf, const vector<int> &alo)
 {
     clause_t cl;
     for(std::size_t i=0, max=alo.size(); i<max; i++)
@@ -141,22 +141,24 @@ void atMostOne(cnf_t *cnf, vector<int> alo)
         }
 }
 
-void atLeastOne(cnf_t *cnf, vector<int> amo)
+void atLeastOne(cnf_t *cnf, const vector<int>& amo)
 {
     clause_t cl;
-    for(std::size_t i = 0, max=amo.size(); i<max; i++)
-        cl.push_back(amo[i]);
+    for(int i : amo)
+        cl.push_back(i);
     cnf->push_back(cl);
 }
 
 pair<int,cnf_t> commanderEncoding(vector<int> amo, int &nextFree)
 {
-    int a,b,c;
-    cnf_t clauses;
-    if(amo.size()==0)
+    if(amo.empty())
         return make_pair(0, cnf_t());
     if(amo.size()==1)
         return make_pair(amo[0], cnf_t());
+
+    int a=0,b=0,c=0;
+    cnf_t clauses;
+
     if(amo.size()==2)
     {
         a = amo[0];
@@ -164,16 +166,16 @@ pair<int,cnf_t> commanderEncoding(vector<int> amo, int &nextFree)
         c = 0;
         clauses = cnf_t();
     }
-    if(amo.size()==3)
+    else if(amo.size()==3)
     {
         a = amo[0];
         b = amo[1];
         c = amo[2];
         clauses = cnf_t();
     }
-    if(amo.size()>3)
+    else if(amo.size()>3)
     {
-        int p=ceil(amo.size()/3);
+        const int p=ceil(amo.size()/3);
 
         auto p1 = commanderEncoding(vector<int>(amo.begin(), amo.begin()+p), nextFree);
         auto p2 = commanderEncoding(vector<int>(amo.begin()+p, amo.begin()+2*p),nextFree);
@@ -182,11 +184,11 @@ pair<int,cnf_t> commanderEncoding(vector<int> amo, int &nextFree)
         b = p2.first;
         c = p3.first;
 
-        for(auto cl : p1.second)
+        for(const auto& cl : p1.second)
             clauses.push_back(cl);
-        for(auto cl : p2.second)
+        for(const auto& cl : p2.second)
             clauses.push_back(cl);
-        for(auto cl : p3.second)
+        for(const auto& cl : p3.second)
             clauses.push_back(cl);
     }
 
@@ -244,7 +246,7 @@ pair<int,cnf_t> commanderEncoding(vector<int> amo, int &nextFree)
     return make_pair(cmd,clauses);
 }
 
-void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits)
+void YBEClausesNew(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits)
 {
     vector<matrixLits_t> ybe_lits = vector<matrixLits_t>(problem_size, matrixLits_t(problem_size, vector<vector<lit_t>>(problem_size,vector<lit_t>(problem_size,0))));
     for (int i=0; i<problem_size; i++){
@@ -285,9 +287,9 @@ void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits)
     }
 }
 
-void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, vector<int> diag)
+void YBEClausesNew(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits, const vector<int> &diag)
 {
-    ybeLits_t ybe_lits = ybeLits_t(problem_size, matrixLits_t(problem_size, vector<vector<lit_t>>(problem_size,vector<lit_t>(problem_size,0))));
+    auto ybe_lits = ybeLits_t(problem_size, matrixLits_t(problem_size, vector<vector<lit_t>>(problem_size,vector<lit_t>(problem_size,0))));
     
     for (int i=0; i<problem_size; i++){
         for (int j=i+1; j<problem_size; j++){
@@ -343,10 +345,10 @@ void YBEClausesNew(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, vector<
     }
 }
 
-void fixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow, int n){
+void fixFirstRows(cnf_t *cnf, const matrixLits_t &cycset_lits, const vector<int> &firstRow, int n){
     for(int j = 0; j<n; j++){
         for(int i=0;i<problem_size;i++){
-            if(diagPart && i==j)
+            if(i==j)
                 continue;
             clause_t cl;
             cl.push_back(cycset_lits[j][i][firstRow[i]]);
@@ -355,11 +357,11 @@ void fixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow, i
     }
 }
 
-void unfixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow, int n){
+void unfixFirstRows(cnf_t *cnf, const matrixLits_t &cycset_lits, const vector<int> &firstRow, int n){
     clause_t cl;
     for(int j=0;j<n;j++){
         for(int i=0;i<problem_size;i++){
-            if(diagPart && i==j)
+            if(i==j)
                 continue;
             cl.push_back(-cycset_lits[j][i][firstRow[i]]);
         }
@@ -367,7 +369,7 @@ void unfixFirstRows(cnf_t *cnf, matrixLits_t &cycset_lits, vector<int> firstRow,
     cnf->push_back(cl);
 }
 
-void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
     //Encode original matrix
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
@@ -424,7 +426,7 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
                 perm_lits[i][j]=nextFree++;
     }
 
-    vector<int> to_encode = vector<int>{};
+    auto to_encode = vector<int>{};
     for(int i=0; i<problem_size;i++){
         to_encode.push_back(-perm_lits[i][i]);
     }
@@ -433,9 +435,10 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
     //permutation should be well-defined
     for(int i=0; i<problem_size;i++){
         exactlyOne(cnf,perm_lits[i],nextFree);
-        vector<int> to_encode;
+        to_encode.clear();
+        to_encode.reserve((problem_size));
         for(int j=0; j<problem_size; j++){
-            to_encode.push_back(perm_lits[j][i]);
+            to_encode.emplace_back(perm_lits[j][i]);
         }
         exactlyOne(cnf,to_encode,nextFree);
     }
@@ -446,22 +449,22 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
             auto cycle_og = diag.cycle(og);
             for(int img : initialPart->options(og)){
                 if(og==img){
-                    for(int i=1; i<cycle_og.size(); i++){
-                        if(cycle_og[i]==og)
+                    for(auto el : cycle_og){
+                        if(el==og)
                             continue;
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[el][el]}));
                     }
                 } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
                     
-                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
+                    int dist = static_cast<int>(find(cycle_og.begin(), cycle_og.end(), img) - cycle_og.begin());
 
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size; i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
                     }
                 } else { 
                     auto cycle_perm = diag.cycle(img);
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size;i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
                     }
@@ -533,10 +536,10 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
     }
 }
 
-void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
-    
-    matrixLits_t smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
-    vector<vector<int>> notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
+void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
+
+    auto smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    auto notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
     
     
     //Encode original matrix
@@ -577,9 +580,10 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
     //permutation should be well-defined
     for(int i=0; i<problem_size;i++){
         exactlyOne(cnf,perm_lits[i],nextFree);
-        vector<int> to_encode;
+        to_encode.clear();
+        to_encode.reserve(problem_size);
         for(int j=0; j<problem_size; j++){
-            to_encode.push_back(perm_lits[j][i]);
+            to_encode.emplace_back(perm_lits[j][i]);
         }
         exactlyOne(cnf,to_encode,nextFree);
     }
@@ -590,22 +594,22 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
             auto cycle_og = diag.cycle(og);
             for(int img : initialPart->options(og)){
                 if(og==img){
-                    for(int i=1; i<cycle_og.size(); i++){
-                        if(cycle_og[i]==og)
+                    for(auto el : cycle_og){
+                        if(el==og)
                             continue;
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[el][el]}));
                     }
                 } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
                     
-                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
+                    int dist = static_cast<int>(find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin());
 
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size; i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
                     }
                 } else { 
                     auto cycle_perm = diag.cycle(img);
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size;i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
                     }
@@ -656,7 +660,7 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                 continue;
             for(int val=0; val<problem_size;val++){
                     larger[row][col][val]=nextFree++;
-                    vector<int> toAdd=vector<int>();
+                    auto toAdd=vector<int>();
                     for(int k=0;k<=val;k++){
                         if(k==diag.diag[row])
                             continue;
@@ -675,7 +679,7 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
                 continue;
             for(int val=0; val<problem_size;val++){
                     smaller[row][col][val]=nextFree++;
-                    vector<int> toAdd=vector<int>();
+                    auto toAdd=vector<int>();
                     for(int k=val;k<problem_size;k++){
                         if(k==diag.diag[row])
                             continue;
@@ -733,10 +737,10 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
         return;
 }
 
-void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
     
-    matrixLits_t smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
-    vector<vector<int>> notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
+    auto smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+    auto notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
     
     
     //Encode original matrix
@@ -755,7 +759,7 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
                 continue;
             for(int val=0; val<problem_size; val++){
                 larger[row][col][val]=nextFree++;
-                vector<int> toAdd=vector<int>();
+                auto toAdd=vector<int>();
                 for(int k=0;k<=val;k++){
                     if(k==diag.diag[row])
                         continue;
@@ -784,7 +788,7 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
                 continue;
             for(int val=0; val<problem_size;val++){
                 smaller[row][col][val]=nextFree++;
-                vector<int> toAdd=vector<int>();
+                auto toAdd=vector<int>();
                 for(int k=val;k<problem_size;k++){
                     if(k==diag.diag[row])
                         continue;
@@ -817,9 +821,10 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
     //permutation should be well-defined
     for(int i=0; i<problem_size;i++){
         exactlyOne(cnf,perm_lits[i],nextFree);
-        vector<int> to_encode;
+        to_encode.clear();
+        to_encode.reserve(problem_size);
         for(int j=0; j<problem_size; j++){
-            to_encode.push_back(perm_lits[j][i]);
+            to_encode.emplace_back(perm_lits[j][i]);
         }
         exactlyOne(cnf,to_encode,nextFree);
     }
@@ -830,22 +835,22 @@ void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, m
             auto cycle_og = diag.cycle(og);
             for(int img : initialPart->options(og)){
                 if(og==img){
-                    for(int i=1; i<cycle_og.size(); i++){
-                        if(cycle_og[i]==og)
+                    for(auto i : cycle_og){
+                        if(i==og)
                             continue;
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[i]]}));
+                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[i][i]}));
                     }
                 } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
                     
-                    int dist = find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin();
+                    int dist = static_cast<int>(find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin());
 
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size; i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
                     }
                 } else { 
                     auto cycle_perm = diag.cycle(img);
-                    int size = cycle_og.size();
+                    int size = static_cast<int>(cycle_og.size());
                     for(int i=1; i<size;i++){
                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
                     }

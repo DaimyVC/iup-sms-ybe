@@ -3,7 +3,6 @@
  */
 #include "useful.h"
 #include "global.h"
-#include "solve.h"
 #include "solveGeneral.hpp"
 #include "cadical.hpp"
 
@@ -58,12 +57,12 @@ bool CommonInterface::checkMin(bool final)
   
   try
   {
-    if(!mincheck->preCheck(cycset,cycset_lits)){
+    if(!mincheck->preCheck(cycset)){
       mincheck->MinCheck(cycset);
       //checkMinimality(cycset,cycset_lits);
     }
   }
-  catch (clause_t c)
+  catch (clause_t &c)
   {
     stats.nSymBreakClauses+=1LL;
     addClause(c,true);
@@ -79,7 +78,7 @@ bool CommonInterface::checkMin(bool final)
       stats.PartCheckSucc+=1LL;
     }
   }
-  catch (vector<clause_t> cs)
+  catch (vector<clause_t> &cs)
   {
     //for(auto c : cs){
       stats.nSymBreakClauses+=1LL;
@@ -99,10 +98,10 @@ bool CommonInterface::checkMin(bool final)
   } 
   catch (LimitReachedException)
   {
-    bool failed = true;
+    failed = true;
   }
 
-  if(fullDefined && !failed && allModels){
+  if(fullDefined && !failed){
     nModels++;
     if(!noEnum){
       fprintf(output,"Solution %d\n", nModels);
@@ -112,7 +111,7 @@ bool CommonInterface::checkMin(bool final)
     for (int i = 0; i < problem_size; i++)
       for (int j = 0; j < problem_size; j++)
       {
-        if(diagPart && i==j)
+        if(i==j)
               continue;
         for (int k = 0; k < problem_size; k++)
         {
@@ -168,26 +167,22 @@ bool CommonInterface::check()
     fprintCycleSet(output, cycset);
   }
 
-  if (allModels)
-  {
-    // exclude current cycle set
-    vector<lit_t> clause;
-    for (int i = 0; i < problem_size; i++)
-      for (int j = 0; j < problem_size; j++)
+  // exclude current cycle set
+  vector<lit_t> clause;
+  for (int i = 0; i < problem_size; i++)
+    for (int j = 0; j < problem_size; j++)
+    {
+      if(i==j)
+        continue;
+      for (int k = 0; k < problem_size; k++)
       {
-        if(diagPart && i==j)
-              continue;
-        for (int k = 0; k < problem_size; k++)
-        {
-          if (cycset.assignments[i][j][k] == True_t){
-            clause.push_back(-cycset_lits[i][j][k]);
-          }
+        if (cycset.assignments[i][j][k] == True_t){
+          clause.push_back(-cycset_lits[i][j][k]);
         }
       }
-    addClause(clause, false);
-    return false;
-  }
-  return true;
+    }
+  addClause(clause, false);
+  return false;
 }
 
 void CommonInterface::printStatistics()
@@ -212,8 +207,7 @@ void CommonInterface::printStatistics()
   printf("Calls of full check - nothing added: %lld\n", stats.FullCheckFail);
   printf("Time of full check - sbc added: %f\n", (stats.FullCheckSuccTime));
   printf("Time of full check - nothing added: %f\n", (stats.FullCheckFailTime));
-  if (allModels)
-    printf("Number of models: %d\n", nModels);
+  printf("Number of models: %d\n", nModels);
 }
 
 void CommonInterface::solve()
@@ -223,8 +217,8 @@ void CommonInterface::solve()
   fflush(stdout);
 
   // get a solve handle
-  int cubeCounter = 0;
-  solve(vector<int>());
+  auto assumps=vector<int>();
+  solve(assumps);
 
   printf("** Search finished\n");
   printStatistics();

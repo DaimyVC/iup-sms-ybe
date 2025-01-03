@@ -78,7 +78,7 @@ vector<int> bitdomain_t::options(){
     }
   }
   return els;
-};
+}
 
 void bitdomain_t::print(){
   printf("{");
@@ -137,19 +137,19 @@ bitdomains3_t::bitdomains3_t(bool init){
 
 
 
-bitdomains2_t::~bitdomains2_t(){}
-bitdomains3_t::~bitdomains3_t(){}
+bitdomains2_t::~bitdomains2_t()= default;
+bitdomains3_t::~bitdomains3_t()= default;
 
 
 
-int bitdomains2_t::get(int idx){
+int bitdomains2_t::get(int idx) {
   if(numtrue(idx)==1){
     return firstel(idx);
   } else {
     return -1;
   }
 }
-int bitdomains3_t::get(int r, int c){
+int bitdomains3_t::get(int r, int c) {
   if(numtrue(r,c)==1){
     return firstel(r,c);
   } else {
@@ -159,14 +159,14 @@ int bitdomains3_t::get(int r, int c){
 
 
 
-bool bitdomains2_t::get(int idx, int e){
+bool bitdomains2_t::get(int idx, int e) {
   if(numtrue(idx)!=0){
     return dom[chunk*idx+2+e]==1;
   } else {
     return false;
   }
 }
-bool bitdomains3_t::get(int r, int c, int e){
+bool bitdomains3_t::get(int r, int c, int e) {
   if(numtrue(r,c)!=0){
     return dom[chunkr*r+chunkc*c+2+e]==1;
   } else {
@@ -212,19 +212,19 @@ void bitdomains3_t::reset(){
 
 
 
-int bitdomains2_t::firstel(int e){
+int bitdomains2_t::firstel(int e) {
   return dom[chunk*e];
 }
-int bitdomains3_t::firstel(int r, int c){
+int bitdomains3_t::firstel(int r, int c) {
   return dom[chunkr*r+chunkc*c];
 }
 
 
 
-int bitdomains2_t::numtrue(int e){
+int bitdomains2_t::numtrue(int e) {
   return dom[chunk*e+1];
 }
-int bitdomains3_t::numtrue(int r, int c){
+int bitdomains3_t::numtrue(int r, int c) {
   return dom[chunkr*r+chunkc*c+1];
 }
 
@@ -324,15 +324,15 @@ void bitdomains3_t::reset(int r, int c){
   dom[chunkr*r+chunkc*c+1]=0;
 }
 
-bool bitdomains2_t::none(int e){
+bool bitdomains2_t::none(int e) {
   return numtrue(e)==0;
 }
-bool bitdomains3_t::none(int r, int c){
+bool bitdomains3_t::none(int r, int c) {
   return numtrue(r, c)==0;
 }
 
 
-vector<int> bitdomains2_t::options(int e){
+vector<int> bitdomains2_t::options(int e) {
   vector<int> els = vector<int>();
   /* if(rev){
     for(int j=problem_size-1; j>=0; j--){
@@ -362,7 +362,7 @@ vector<int> bitdomains2_t::options(int e){
   }
   return els;
 }
-vector<int> bitdomains3_t::options(int r, int c){
+vector<int> bitdomains3_t::options(int r, int c) {
   vector<int> els = vector<int>();
   for(int j=0; j<problem_size; j++){
     if(dom[chunkr*r+chunkc*c+j+2]==1){

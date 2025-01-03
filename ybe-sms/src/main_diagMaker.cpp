@@ -1,5 +1,4 @@
 #include "useful.h"
-#include "domains.h"
 #include <iostream>
 #include <fstream>
 
@@ -30,14 +29,16 @@ int main(int argc, char const **argv)
 
     vector<int> toPart;
     vector<vector<int>> parts;
+    toPart.reserve((problem_size));
     for(int i=0; i<problem_size; i++)
-        toPart.push_back(i);
+        toPart.emplace_back(i);
     part(problem_size, toPart, 0, parts);
     vector<vector<int>> diags;
     vector<int> d;
+    d.reserve((problem_size));
     for(int i=0; i<problem_size; i++)
-        d.push_back(i);
-    diags.push_back(d);
+        d.emplace_back(i);
+    diags.emplace_back(d);
     d.clear();
     makeDiagonals(parts, diags);
 

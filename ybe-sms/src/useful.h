@@ -4,20 +4,12 @@
 
 #include "domains.h"
 #include <algorithm>
-#include <utility>
 #include <vector>
 #include <iostream>
-#include <numeric>
-#include <string>
-#include <string.h>
-#include <cassert>
+#include <cstring>
 #include <fstream>
-#include <sstream>
-#include <unordered_set>
 #include <chrono>
-
-#include <unordered_map>
-#include <boost/icl/interval_set.hpp>
+#include <memory>
 
 using namespace std;
 using namespace chrono;
@@ -52,7 +44,7 @@ typedef struct cycle_set_t{
     std::vector<vector<vector<int>>> cycset_lits;
     std::vector<vector<bitdomain_t>> bitdomains;
 
-    cycle_set_t(int problem_size, std::vector<vector<vector<int>>> lits){
+    cycle_set_t(int problem_size, const std::vector<vector<vector<int>>> &lits){
         cycset_lits=lits;
         assignments=vector<vector<vector<truth_vals>>>(problem_size, vector<vector<truth_vals>>(problem_size, vector<truth_vals>(problem_size, Unknown_t)));
         matrix=vector<vector<int>>(problem_size, vector<int>(problem_size, -1));
@@ -65,14 +57,14 @@ typedef struct cycle_set_t{
 class pperm_common
 {
 public:
-    virtual ~pperm_common(){}
+    virtual ~pperm_common()= default;
     virtual shared_ptr<pperm_common> copyPerm() { EXIT_UNWANTED_STATE };
-    virtual int permOf(int p) { EXIT_UNWANTED_STATE };
-    virtual vector<int> options(int p) { EXIT_UNWANTED_STATE };
-    virtual vector<int> invOptions(int p) { EXIT_UNWANTED_STATE };
-    virtual int invPermOf(int p) { EXIT_UNWANTED_STATE };
-    virtual bool fixed(int p) { EXIT_UNWANTED_STATE };
-    virtual bool fix(int p, int pp) { EXIT_UNWANTED_STATE };
+    virtual int permOf(int /*p*/) { EXIT_UNWANTED_STATE };
+    virtual vector<int> options(int /*p*/) { EXIT_UNWANTED_STATE };
+    virtual vector<int> invOptions(int /*p*/) { EXIT_UNWANTED_STATE };
+    virtual int invPermOf(int /*p*/) { EXIT_UNWANTED_STATE };
+    virtual bool fixed(int /*p*/) { EXIT_UNWANTED_STATE };
+    virtual bool fix(int /*p*/, int /*pp*/) { EXIT_UNWANTED_STATE };
     virtual void print() { EXIT_UNWANTED_STATE };
     virtual bool fullDefined() { EXIT_UNWANTED_STATE };
     virtual vector<int> getPerm() { EXIT_UNWANTED_STATE }; 
@@ -94,7 +86,7 @@ public:
     void print();
     bool fullDefined();
     vector<int> getPerm();
-    pperm_plain(std::vector<int> perm);
+    pperm_plain(const std::vector<int>& perm);
     pperm_plain();
     ~pperm_plain();
 };
@@ -114,7 +106,7 @@ public:
     void print();
     bool fullDefined();
     vector<int> getPerm();
-    pperm_bit(vector<int> perm);
+    pperm_bit(const vector<int>& perm);
     pperm_bit();
     ~pperm_bit();
 };
@@ -123,7 +115,7 @@ typedef struct cyclePerm_t{
     std::vector<int> element;
     std::vector<int> part;
     std::vector<int> diag;
-    cyclePerm_t(std::vector<int> perm);
+    cyclePerm_t(const std::vector<int>& perm);
     cyclePerm_t();
     int permOf(int p);
     int invPermOf(int p);
@@ -131,7 +123,7 @@ typedef struct cyclePerm_t{
     void print();
 } cyclePerm_t;
 
-vector<vector<int>> permToCyclePerm(vector<int> &perm);
+vector<vector<int>> permToCyclePerm(const vector<int> &perm);
 void printCycleSet(const cycle_set_t &cycset);
 void fprintCycleSet(FILE *stream, const cycle_set_t &cycset);
 void printPartiallyDefinedCycleSet(const cycle_set_t &cycset);

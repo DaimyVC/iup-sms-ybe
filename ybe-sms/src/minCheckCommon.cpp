@@ -2,24 +2,20 @@
 #include "global.h"
 #include<tuple>
 #include<algorithm>
-#include<set>
-#include<list>
 #include<iterator>
 
-void MinCheckCommon::addClauses(vector<int> &perm, int r, int c, bool old){
+void MinCheckCommon::addClauses(const vector<int> &perm, int r, int c, bool old){
     if(old)
         addClauses(perm,r,c);
     else
         addClausesShort(perm,r,c);
 }
 
-bool MinCheckCommon::preCheck(cycle_set_t &cycset, vector<vector<vector<lit_t>>> &cycset_lits){
+bool MinCheckCommon::preCheck(cycle_set_t &cycset){
     bool isID = true;
     for(int i = 0; i<problem_size; i++){
         for(int j = 0; j<problem_size; j++){
-            if(count(cycset.matrix[j].begin(), cycset.matrix[j].end(), i)>1){
-                return true;
-            } else if(cycset.bitdomains[i][j].numTrue==0){
+            if((count(cycset.matrix[j].begin(), cycset.matrix[j].end(), i)>1) || cycset.bitdomains[i][j].numTrue==0 ){
                 return true;
             }
             if(cycset.matrix[i][j]!=j)
@@ -30,24 +26,22 @@ bool MinCheckCommon::preCheck(cycle_set_t &cycset, vector<vector<vector<lit_t>>>
 }
 
 
-bool MinCheckCommon::permIsId(vector<int> &perm){
+bool MinCheckCommon::permIsId(const vector<int> &perm){
     for(int i=0; i<problem_size;i++){
         if(i==problem_size-1)
             return perm[i]==-1 || perm[i]==i;
         else if(perm[i]!=i)
             return false;
     }
+    // can never happen
+    return false;
 }
 
 int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
-    bool permId=true;
-
     if(permIsId(perm))
         return -1;
 
-    
-
-    vector<int> invperm = vector<int>(problem_size,-1);
+    auto invperm = vector<int>(problem_size,-1);
     for(int r=0; r<problem_size; r++)
         invperm[perm[r]]=r;
 
@@ -77,7 +71,7 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
                     break;
                 }
             } else {
-                vector<int> invpermvals=vector<int>();
+                auto invpermvals=vector<int>();
                 for(auto p : permVal){
                     invpermvals.push_back(invperm[p]);
                 }
@@ -89,8 +83,9 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
                     continue;
                 } else if(propagateMincheck) {
                     if(perm[r]==r && perm[c]==c){
-                        for(int i=0; i<permVal.size(); i++){
-                            if(invpermvals[i]<permVal[i])
+                        int maxsize = static_cast<int>(permVal.size());
+                        for(int val=0; val<maxsize; val++){
+                            if(invpermvals[val]<permVal[val])
                                 addClauses(perm,r,c,oldBreakingClauses);
                         }
                         fixes=-1;
@@ -113,7 +108,7 @@ int MinCheckCommon::permFullyDefinedCheck(vector<int> &perm, int i, int j){
     return -1;
 }
 
-void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
+void MinCheckCommon::addClauses(const vector<int> &perm, int r, int c)
 {
     if(logging>0){
         printf("ADDING BREAKING CLAUSES %d %d\n",r,c);
@@ -123,7 +118,7 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
     }
 
     vector<int> toAdd;
-    vector<int> invperm=vector<int>(problem_size,-1);
+    auto invperm=vector<int>(problem_size,-1);
         
 
     for(int i=0; i<problem_size; i++){
@@ -135,7 +130,7 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
     int index=problem_size-1;
     for(int ri=0;ri<=r;ri++){
         for(int ci=0;ci<=problem_size-1;ci++){
-            if(diagPart && ri==ci)
+            if(ri==ci)
                 continue;
             int ogVal=cycset.matrix[ri][ci];
             
@@ -146,7 +141,7 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
             for(int i=problem_size-1; i>=0; i--){
                 if(ri==r && ci==c && i==index)
                     goto endloopOld;
-                if(diagPart && i==cycset.matrix[ri][ri])
+                if(i==cycset.matrix[ri][ri])
                     continue;
                 truth_vals og_asg = cycset.assignments[ri][ci][i];
                 truth_vals perm_asg=cycset.assignments[perm[ri]][perm[ci]][perm[i]];
@@ -170,11 +165,12 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
     }
 
     endloopOld:
-        vector<tuple<int,int>> permvals = vector<tuple<int,int>>();
+        auto permvals = vector<tuple<int,int>>();
+        permvals.reserve(problem_size);
         for(int pv : cycset.bitdomains[perm[r]][perm[c]].options()){
-            permvals.push_back(tuple<int,int>{pv,invperm[pv]});
+            permvals.emplace_back(pv,invperm[pv]);
         }
-        sort(permvals.begin(), permvals.end(), [](tuple<int,int>a,tuple<int,int>b){return get<1>(a)<=get<1>(b);});
+        sort(permvals.begin(), permvals.end(), [](const tuple<int,int> &a, const tuple<int,int> &b){return get<1>(a)<=get<1>(b);});
         bool permValFixed=permvals.size()==1;
         bool ogFixed=false;
         int og = cycset.matrix[r][c];
@@ -199,7 +195,8 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
             if(logging>1){
                 printf("-M_%d_%d_%d\n",perm[r],perm[c],get<0>(permvals[0]));
             }
-            for(int i=0; i<permvals.size();i++){
+            int numPermvals=int(permvals.size());
+            for(int i=0; i<numPermvals;i++){
                 if(opts[i]>get<1>(permvals[0])){
                     //vector<int>cls=toAdd;
                     toAdd.push_back(-cycset_lits[r][c][opts[i]]);
@@ -214,29 +211,29 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
             if(logging>1){
                 printf("-M_%d_%d_%d\n",r,c,og);
             }
-            for(int i=0; i<permvals.size();i++){
-                if(get<1>(permvals[i])<og){
-                    toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permvals[i])]);
+            for(auto & permval : permvals){
+                if(get<1>(permval)<og){
+                    toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permval)]);
                     if(logging>1){
-                        printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permvals[i]));
+                        printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permval));
                     }
                     throw toAdd;
                 }
             }
         } else {
             if(perm[r]==r && perm[c]==c){
-                for(int i=0; i<permvals.size();i++){
-                    if(get<1>(permvals[i])<get<0>(permvals[i]) ){
-                        toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permvals[i])]);
+                for(auto & permval : permvals){
+                    if(get<1>(permval)<get<0>(permval) ){
+                        toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permval)]);
                         if(logging>1){
-                            printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permvals[i]));
+                            printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permval));
                         }
                         throw toAdd;
                     }
                 }
             } else {
                 for(int i=0;i<problem_size;i++){
-                    if(diagPart && i==cycset.matrix[r][r])
+                    if(i==cycset.matrix[r][r])
                         continue;
                     if(!cycset.bitdomains[r][c].dom[i]){
                         toAdd.push_back(cycset_lits[r][c][i]);
@@ -248,11 +245,11 @@ void MinCheckCommon::addClauses(vector<int> &perm, int r, int c)
                 if(logging>1){
                     printf("\n");
                 }
-                for(int i=0; i<permvals.size();i++){
-                    if(get<1>(permvals[i])<og ){
-                        toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permvals[i])]);
+                for(auto & permval : permvals){
+                    if(get<1>(permval)<og ){
+                        toAdd.push_back(-cycset_lits[perm[r]][perm[c]][get<0>(permval)]);
                         if(logging>1){
-                            printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permvals[i]));
+                            printf(" and -M_%d_%d_%d\n",perm[r],perm[c],get<0>(permval));
                         }
                         throw toAdd;
                     }
@@ -302,14 +299,13 @@ void MinCheckCommon::addToClause(int r, int c, int lit, vector<bitdomains2_t> &l
                     lits[r].reset(i,lit);
                 }
             }
-             else {   
+            else {
                 if(i!=lit){
                     lits[r].set(c,i);
                 }
                 if(i!=c){
                     lits[r].reset(i,lit);
                 }
-
             }
         }
     } else {
@@ -318,7 +314,7 @@ void MinCheckCommon::addToClause(int r, int c, int lit, vector<bitdomains2_t> &l
 }
 
 
-void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
+void MinCheckCommon::addClausesShort(const vector<int> &perm, int r, int c)
 {
     if(logging>0){
         printf("ADDING CLAUSES %d %d\n",r,c);
@@ -327,9 +323,8 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
         }
     }
 
-    vector<int> cls=vector<int>();
-    vector<bitdomains2_t> toAdd=vector<bitdomains2_t>(problem_size,bitdomains2_t(false));
-    vector<int> invperm=vector<int>(problem_size,-1);
+    auto toAdd=vector<bitdomains2_t>(problem_size,bitdomains2_t(false));
+    auto invperm=vector<int>(problem_size,-1);
         
 
     for(int i=0; i<problem_size; i++){
@@ -341,43 +336,40 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
 
     for(int ri=0;ri<=r;ri++){
         for(int ci=0;ci<=problem_size-1;ci++){
-            if(diagPart && ri==ci)
+            if(ri==ci)
                 continue;
             if(ri==r && ci==c)
                 goto endloopOld;
-            
-            bool ogFixed=false;
+
             int og = cycset.matrix[ri][ci];
-            if(og!=-1){
-                ogFixed=true;
-            } else {
+            if(og==-1){
                 og = cycset.bitdomains[ri][ci].firstel;
             }
 
             if(perm[ri]!=ri || perm[ci]!=ci){
-                vector<tuple<int,int>> permvals = vector<tuple<int,int>>();
+                auto permvals = vector<tuple<int,int>>();
+                permvals.reserve(problem_size);
                 for(int pv : cycset.bitdomains[perm[ri]][perm[ci]].options()){
-                    permvals.push_back(tuple<int,int>{pv,invperm[pv]});
+                    permvals.emplace_back(pv,invperm[pv]);
                 }
-                sort(permvals.begin(), permvals.end(), [](tuple<int,int>a,tuple<int,int>b){return get<1>(a)<=get<1>(b);});
-                bool permValFixed=permvals.size()==1;
+                sort(permvals.begin(), permvals.end(), [](const tuple<int,int> &a, const tuple<int,int> &b){return get<1>(a)<=get<1>(b);});
 
                 for(int i=0; i<get<1>(permvals.back());i++){
-                    if(diagPart && i==cycset.matrix[ri][ri])
+                    if (i==cycset.matrix[ri][ri])
                         continue;
                     else if(!cycset.bitdomains[ri][ci].dom[i])
                         addToClause(ri,ci,i,toAdd);
                 }
 
                 for(int i=og+1; i<problem_size;i++){
-                    if(diagPart && perm[i]==cycset.matrix[perm[ri]][perm[ri]])
+                    if(perm[i]==cycset.matrix[perm[ri]][perm[ri]])
                         continue;
                     else if(!cycset.bitdomains[perm[ri]][perm[ci]].dom[perm[i]])
                         addToClause(perm[ri],perm[ci],perm[i],toAdd);
                 }
             } else {
                 for(int i=0; i<problem_size;i++){
-                    if(diagPart && i==cycset.matrix[ri][ri])
+                    if(i==cycset.matrix[ri][ri])
                         continue;
                     else if(invperm[i]>i && !cycset.bitdomains[ri][ci].dom[i]){
                         addToClause(ri,ci,i,toAdd);
@@ -388,12 +380,12 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
     }
 
     endloopOld:
-
-        vector<tuple<int,int>> permvals = vector<tuple<int,int>>();
+        auto permvals = vector<tuple<int,int>>();
+        permvals.reserve(problem_size);
         for(int pv : cycset.bitdomains[perm[r]][perm[c]].options()){
-            permvals.push_back(tuple<int,int>{pv,invperm[pv]});
+            permvals.emplace_back(pv,invperm[pv]);
         }
-        sort(permvals.begin(), permvals.end(), [](tuple<int,int>a,tuple<int,int>b){return get<1>(a)<=get<1>(b);});
+        sort(permvals.begin(), permvals.end(), [](const tuple<int,int> &a, const tuple<int,int> &b){return get<1>(a)<=get<1>(b);});
         bool permValFixed=permvals.size()==1;
         bool ogFixed=false;
         int og = cycset.matrix[r][c];
@@ -406,61 +398,60 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
         if(get<1>(permvals.back())<og){
             //PERM IS A WITNESS OF NON-MINIMALITY
             for(int i=0; i<og;i++){
-                if(diagPart && i==cycset.matrix[r][r])
+                if(i==cycset.matrix[r][r])
                     continue;
                 else if(!cycset.bitdomains[r][c].dom[i])
                     addToClause(r,c,i,toAdd);
             }
 
             for(int i=get<1>(permvals.back())+1; i<problem_size;i++){
-                if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
+                if(perm[i]==cycset.matrix[perm[r]][perm[r]])
                     continue;
                 else if(!cycset.bitdomains[perm[r]][perm[c]].dom[perm[i]])
                     addToClause(perm[r],perm[c],perm[i],toAdd);
             }
-            vector<int> cls = vector<int>();
+            auto cls = vector<int>();
             toClause(toAdd,cls);
             throw cls;
         //ELSE REFINE CYCLE SET
         } else if(permValFixed){
             vector<int> opts=cycset.bitdomains[r][c].options();
             for(int i=get<1>(permvals.back())+1; i<problem_size;i++){
-                if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
+                if(perm[i]==cycset.matrix[perm[r]][perm[r]])
                     continue;
                 else if(!cycset.bitdomains[perm[r]][perm[c]].dom[perm[i]])
                     addToClause(perm[r],perm[c],perm[i],toAdd);
             }
-            for(int i=0; i<opts.size();i++){
-                if(opts[i]>get<1>(permvals[0])){
-                    cls.push_back(-cycset_lits[r][c][opts[i]]);
-                    addToClause(r,c,opts[i],toAdd,true);
-                    vector<int> cls = vector<int>();
+            for(int opt : opts){
+                if(opt>get<1>(permvals[0])){
+                    addToClause(r,c,opt,toAdd,true);
+                    auto cls = vector<int>();
                     toClause(toAdd,cls);
                     throw cls;
                 }
             }
         } else if(ogFixed) {
             for(int i=0;i<og;i++){
-                if(diagPart && i==cycset.matrix[r][r])
+                if(i==cycset.matrix[r][r])
                     continue;
                 if(!cycset.bitdomains[r][c].dom[i]){
                     addToClause(r,c,i,toAdd);
                 }
             }
-            for(int i=0; i<permvals.size();i++){
-                if(get<1>(permvals[i])<og){
-                    addToClause(perm[r],perm[c],get<0>(permvals[i]),toAdd,true);
-                    vector<int> cls = vector<int>();
+            for(auto & permval : permvals){
+                if(get<1>(permval)<og){
+                    addToClause(perm[r],perm[c],get<0>(permval),toAdd,true);
+                    auto cls = vector<int>();
                     toClause(toAdd,cls);
                     throw cls;
                 }
             }
         } else {
             if(perm[r]==r && perm[c]==c){
-                for(int i=0; i<permvals.size();i++){
-                    if(get<1>(permvals[i])<get<0>(permvals[i])){
-                        addToClause(perm[r],perm[c],get<0>(permvals[i]),toAdd,true);
-                        vector<int> cls = vector<int>();
+                for(auto & permval : permvals){
+                    if(get<1>(permval)<get<0>(permval)){
+                        addToClause(perm[r],perm[c],get<0>(permval),toAdd,true);
+                        auto cls = vector<int>();
                         toClause(toAdd,cls);
                         throw cls;
                     }
@@ -468,16 +459,16 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
             } else {
                 if(og<=get<1>(permvals.back())){
                     for(int i=0;i<og;i++){
-                        if(diagPart && i==cycset.matrix[r][r])
+                        if(i==cycset.matrix[r][r])
                             continue;
                         if(!cycset.bitdomains[r][c].dom[i]){
                             addToClause(r,c,i,toAdd);
                         }
                     }
-                    for(int i=0; i<permvals.size();i++){
-                        if(get<1>(permvals[i])<og){
-                            addToClause(perm[r],perm[c],get<0>(permvals[i]),toAdd,true);
-                            vector<int> cls = vector<int>();
+                    for(auto & permval : permvals){
+                        if(get<1>(permval)<og){
+                            addToClause(perm[r],perm[c],get<0>(permval),toAdd,true);
+                            auto cls = vector<int>();
                             toClause(toAdd,cls);
                             throw cls;
                         }
@@ -485,16 +476,16 @@ void MinCheckCommon::addClausesShort(vector<int> &perm, int r, int c)
                 } else if(og>=get<1>(permvals.front())) {
                     vector<int> opts=cycset.bitdomains[r][c].options();
                     for(int i=get<1>(permvals.back())+1; i<problem_size;i++){
-                        if(diagPart && perm[i]==cycset.matrix[perm[r]][perm[r]])
+                        if(perm[i]==cycset.matrix[perm[r]][perm[r]])
                             continue;
                         else if(!cycset.bitdomains[perm[r]][perm[c]].dom[perm[i]])
                             addToClause(perm[r],perm[c],perm[i],toAdd);
                     }
-                    for(int i=0; i<permvals.size();i++){
+                    int numPermVals = int(permvals.size());
+                    for(int i=0; i<numPermVals;i++){
                         if(opts[i]>get<1>(permvals[0])){
-                            cls.push_back(-cycset_lits[r][c][opts[i]]);
                             addToClause(r,c,opts[i],toAdd,true);
-                            vector<int> cls = vector<int>();
+                            auto cls = vector<int>();
                             toClause(toAdd,cls);
                             throw cls;
                         }
