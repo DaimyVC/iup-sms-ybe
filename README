@@ -1,46 +1,51 @@
+# Building Instructions
+
 This folder contains:
-(1) CaDiCaL with IPASIRUP
-(2) SAT modulo Symmetries (SMS) solver for YBE Problem
-(3) A ZIP-folder containing the enumerated solutions
+
+(1) CaDiCaL (Biere et al., [2024](https://doi.org/10.1007/978-3-031-65627-9_7)) with IPASIR-UP (Fazekas et al. [2023](https://doi.org/10.5281/zenodo.8003683)).
+
+(2) SAT modulo Symmetries (SMS) solver for YBE Problem based on Kirchweger et al. [2021](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.CP.2021.34).
+
+(3) an archive of the enumerated solutions.
+
 
 0. Unzip the included zip files into one folder.
 
-1. Execute ./buildYBESMS.sh or
+1. Execute the build script ./buildYBESMS.sh or build the tools separately:
 
+    The CaDiCaL solver can be found in the folder 'cadical-master'.
+    To configure and build CaDiCaL run:
 
-1.a  CaDiCaL with IPASIRUP:
---------------------------
-The solver can be found in the folder 'cadical-user-propagation'.
-To configure and build CaDiCaL with user propagators simply run:
+        cd cadical-master/
+        ./configure
+        make
 
-    cd cadical-master/
-    ./configure
-    make
+    To build ybe-sms with CaDiCaL run:
 
-which will produce the 'cadical' binary and the 'libcadical.a' library in the
-'cadical-user-propagation/build/' folder. Check out the 
-'cadical-user-propagation/README.md' and 'cadical-user-propagation/BUILD.md' for
-more details and build instructions.
+        cd ybe-sms/
+        cmake . -B./build
+        cd build
+        make
 
-- The user propagation related code is in the following source file:
-    'cadical-user-propagation/src/external_propagate.cpp'
+# Using the application
 
-- The ExternalPropagator interface can be found here:
-    'cadical-user-propagation/src/cadical.hpp' in lines 976-1030.
+The executable can be found in the folder ybe-sms/build/src as ./ybe_sms
+The tool can also be used with the following runtime parameters:
 
-1.b ybe-sms
--------------------------
-To build ybe-sms with CaDiCaL first follow the steps of (1) and then run:
-
-    cd ybe-sms/
-    cmake . -B./build
-    cd build
-    make
-
-3. The executable can be found in the folder build/src 
-    
-
-
-
-- The implementation of the ExternalPropagator class is in the following file:
-    'sms-cpp-impl/src/solveCadicalClass.hpp'
+| Parameter            	| Use                                                                                                                      	| Default Value      	|
+|----------------------	|--------------------------------------------------------------------------------------------------------------------------	|--------------------	|
+| --size               	| Size of the cycle set                                                                                                    	| 3                  	|
+| --diag x1, .. . , xn 	| Provide a specific diagonal to fix (use together with --diagPart), if not provided, all diagonals are solved in parallel 	|                    	|
+| --checkSols          	| Check partial assignments                                                                                                	| False              	|
+| --checkFreq n        	| Frequency of partial check = 1/n                                                                                         	| 40                 	|
+| --maxDepth n         	| Limit the maximum depth of the minimality check to n (use together with --checkSols)                                     	| +infty             	|
+| --maxMC n            	| Limit the maximum number of nodes visited by the minimality check to n (use together with --checkSols)                   	| +infty             	|
+| --smallerEncoding    	| Use the optimized encoding when fixing the diagonal (use together with --diagPart)                                       	| False              	|
+| --propagate          	| Also refine partial assignments (as opposed to only exclude)                                                             	| False              	|
+| --noCommander        	| Do not use the commander encoding                                                                                        	| False              	|
+| --incr               	| Use the incremental minimality check                                                                                     	| False              	|
+| --limDec n            | Limit the number of decisions made during an incremental minimality check to n (use together with --incr)                 | +infty             	|
+| --limCon n            | Limit the number of conflicts encountered during an incremental minimality check to n (use together with --incr)          | +infty             	|
+| --noEnum             	| Only count solutions (do not write them to file)                                                                         	| False              	|
+| --out                	| Write solutions to given path                                                                                            	| ybe-sms/build/src/ 	|
+| --help                | Output more information about the possible runtime parameters.                                                                                      	| ybe-sms/build/src/ 	|

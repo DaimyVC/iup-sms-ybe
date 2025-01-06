@@ -76,7 +76,6 @@ static struct argp_option options[] = {
 static  int parse_opt(int key, char *arg, struct argp_state *state) {
     switch (key) {
         case 'n': {
-            printf("--noEnum ");
             noEnum = true;
             break;
         }
@@ -88,7 +87,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             problem_size = i;
-            printf("--size=%d ", problem_size);
             break;
         }
 
@@ -108,36 +106,26 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 argp_failure(state,1,0,"diagonal has length %lu different from problem size %d.", diagonal.size(),problem_size);
                 break;
             }
-            printf("--diag=");
-            for (int d : diagonal)
-                printf("%d ",d);
-            printf(" ");
             break;
         }
 
         case 300:
             noCommander = true;
-            printf("--noCommander ");
             break;
         case 301:
             smallerEncoding = true;
-            printf("--smallerEncoding ");
             break;
         case 302:
             useBit = true;
-            printf("--useBit ");
             break;
         case 303:
             oldBreakingClauses = true;
-            printf("--oldBreak ");
             break;
         case 400:
             checkSolutionInProp=true;
-            printf("--checkSols ");
             break;
         case 401:
             propagateLiteralsCadical=true;
-            printf("--propLits ");
             break;
         case 402: {
             int i = atoi(arg);
@@ -146,7 +134,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             checkFreq=i;
-            printf("--checkFreq=%d ",checkFreq);
             break;
         }
         case 403: {
@@ -156,24 +143,19 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             timelimit=i;
-            printf("--time=%d ",timelimit);
             break;
         }
         case 404:
             solOutput = arg;
-            printf("--out=%s ", solOutput);
             break;
         case 405:
             logging = atoi(arg);
-            printf("--logging=%d ",logging);
             break;
         case 'p':
             allPart=true;
-            printf("--allPart ");
             break;
         case 'i':
             incrMincheck=true;
-            printf("--incr ");
             break;
         case 500: {
             int i = atoi(arg);
@@ -182,7 +164,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             limDec=i;
-            printf("--limDec=%d ",limDec);
             break;
         }
         case 501: {
@@ -192,7 +173,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             limCon=i;
-            printf("--limCon=%d ",limCon);
             break;
         }
         case 502: {
@@ -202,7 +182,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             limCls=i;
-            printf("--limCls=%d ",limCls);
             break;
         }
         case 600:
@@ -215,7 +194,6 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             maxDepth=i;
-            printf("--maxDepth=%d ",maxDepth);
             break;
         }
         case 602: {
@@ -225,14 +203,11 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
                 break;
             }
             maxMC=i;
-            printf("--maxMC=%d ",maxMC);
             break;
         }
         case ARGP_KEY_END:
             if (state->argc<=1)
                 printf("Using default settings.\n");
-            else
-                printf("\n");
             break;
     }
 
