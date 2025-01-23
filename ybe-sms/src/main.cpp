@@ -34,7 +34,8 @@ int limCls = -1;
 bool noEnum = false;
 int rseed = 1771177;
 
-string solOutput;
+string solOutput="";
+string logOutput="";
 bool saveState = false;
 bool readState = false;
 
@@ -59,7 +60,8 @@ static struct argp_option options[] = {
     {"checkFreq",  402,  "FREQ",  0,   "If partial solutions are checked, define the frequency with which to check partial solutions."},
     {"time",  403,  "TIMELIM",  0,    "Define a time limit for the main solver. !!ENUMERATION COULD BE INCOMPLETE!!"},
     {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
-    {"logging",  405,  "VERBLEVEL",  OPTION_HIDDEN,   "FOR DEBUG ONLY"},
+    {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
+    {"log",  'l',  "FILE",  0,   "Write the log to the given file."},
 
     {"allPart",  'p',    0,  0,  "Use only one incremental solver (with the partial encoding) for the minimality check. !!USE WITH INCREMENTAL APPROACH!!"   },
     {"incr",  'i',    0,  0,  "Use the incremental approach."   },
@@ -147,6 +149,9 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
         }
         case 404:
             solOutput = arg;
+            break;
+        case 'l':
+            logOutput = arg;
             break;
         case 405:
             logging = atoi(arg);
@@ -237,11 +242,27 @@ int main(int argc, char **argv)
 
     srand(static_cast<unsigned>(rseed));
 
+    printf("Enumerating Solutions");
+
     // ASSIGN DEFAULTS
     int t=0;
     for(int i=0; i<problem_size; i++)
         t+=i;
     t*=problem_size;
+
+    string logFilePath;
+
+    if(logOutput==""){
+        logFilePath.append("size_");
+        logFilePath.append(to_string(problem_size));
+        logFilePath.append(".log");
+    } else {
+        logFilePath.append(logOutput);
+        logFilePath.append(".log");
+    }
+
+    int old_stdout = dup(1);
+    FILE *fp1 = freopen(logFilePath.c_str(),"w",stdout);
 
     if (diagonal.empty()){
         using namespace std::chrono;
@@ -302,15 +323,24 @@ int main(int argc, char **argv)
 
             nextFreeVariable=max(nextFreeVariable,highestVariable);
 
-            printf("Diagonal: ");
-            for(auto el :diag)
-                printf("%d-",el);
-            printf("\n");
-            printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-stats.start).count()) / 1000000000.0);
-            printf("---------------------------------------------------------\n");
+            #pragma omp critical
+            {
+                printf("Diagonal: ");
+                for(auto el :diag)
+                    printf("%d-",el);
+                printf("\n");
+                printf("Total time diagonal: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-stats.start).count()) / 1000000000.0);
+                printf("---------------------------------------------------------\n");
+            }
         }
+
+        stdout = fdopen(old_stdout, "w");
+        printf("Enumeration finished.");
         printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
         printf("Total models found: %d\n", accumulate(numSols.begin(),numSols.end(),0));
+        printf("Log written to ");
+        printf(logOutput.c_str());
+        printf(".log\n");
         return 0;
     }
 
@@ -360,7 +390,18 @@ int main(int argc, char **argv)
     printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-stats.start).count()) / 1000000000.0);
     printf("---------------------------------------------------------\n");
 
+    /** reset cout buffer **/
+    FILE *fp2 = fdopen(old_stdout, "w");
+    fclose(stdout);
+    stdout = fp2;
+    *stdout = *fp2;
+    close(old_stdout);
+
+    printf("Enumeration finished.");
     printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
     printf("Total models found: %d\n", totalModels);
+    printf("Log written to ");
+    printf(logOutput.c_str());
+    printf(".log\n");
     return 0;
 }

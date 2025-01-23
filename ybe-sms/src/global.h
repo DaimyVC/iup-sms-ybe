@@ -28,6 +28,7 @@ extern bool saveState;
 extern bool readState;
 extern bool noCommander;
 extern string solOutput;
+extern string logOutput;
 
 
 #define COUNT_ASSIGNED 0

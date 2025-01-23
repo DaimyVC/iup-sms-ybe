@@ -41,6 +41,7 @@ private:
 public:
   bool propagate(); // Check state of partial assignment and add clauses if necessary; returns true if no clause was added otherwise false
   bool check();     // prints and excludes graph from search space; returns true if no clause was added otherwise false
+  void printStatistics(FILE *fp);
 };
 
 #endif
