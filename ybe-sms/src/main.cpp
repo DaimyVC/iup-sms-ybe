@@ -7,7 +7,6 @@
 #include <sstream>
 #include <argp.h>
 
-
 int nextFreeVariable;
 int problem_size = 3;
 int checkFreq = 40;
@@ -59,7 +58,6 @@ static struct argp_option options[] = {
     {"propLits",  401,  0,  0,    ""},
     {"checkFreq",  402,  "FREQ",  0,   "If partial solutions are checked, define the frequency with which to check partial solutions."},
     {"time",  403,  "TIMELIM",  0,    "Define a time limit for the main solver. !!ENUMERATION COULD BE INCOMPLETE!!"},
-    {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
     {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
     {"log",  'l',  "FILE",  0,   "Write the log to the given file."},
 
@@ -242,7 +240,7 @@ int main(int argc, char **argv)
 
     srand(static_cast<unsigned>(rseed));
 
-    printf("Enumerating Solutions");
+    printf("Enumerating Solutions\n");
 
     // ASSIGN DEFAULTS
     int t=0;
@@ -257,6 +255,7 @@ int main(int argc, char **argv)
         logFilePath.append(to_string(problem_size));
         logFilePath.append(".log");
     } else {
+
         logFilePath.append(logOutput);
         logFilePath.append(".log");
     }
@@ -335,12 +334,12 @@ int main(int argc, char **argv)
         }
 
         stdout = fdopen(old_stdout, "w");
-        printf("Enumeration finished.");
+        printf("Enumeration finished.\n");
         printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
         printf("Total models found: %d\n", accumulate(numSols.begin(),numSols.end(),0));
         printf("Log written to ");
-        printf(logOutput.c_str());
-        printf(".log\n");
+        printf(logFilePath.c_str());
+        printf(" in current working directory.\n");
         return 0;
     }
 
@@ -397,11 +396,11 @@ int main(int argc, char **argv)
     *stdout = *fp2;
     close(old_stdout);
 
-    printf("Enumeration finished.");
+    printf("Enumeration finished.\n");
     printf("Total time: %f\n", (duration_cast<nanoseconds>(steady_clock::now()-start).count()) / 1000000000.0);
     printf("Total models found: %d\n", totalModels);
     printf("Log written to ");
-    printf(logOutput.c_str());
-    printf(".log\n");
+    printf(logFilePath.c_str());
+    printf(" in current working directory.\n");
     return 0;
 }
