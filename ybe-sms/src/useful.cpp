@@ -1,11 +1,12 @@
 #include "useful.h"
 #include "global.h"
+#include <numeric>
 
 void printCycleSet(const cycle_set_t &cycset)
 {
-    for (auto row : cycset.matrix)
+    for (const auto& row : cycset.matrix)
     {
-      for (auto value : row)
+      for (const auto value : row)
         printf("%d ", value);
       printf("\n");
     }
@@ -13,7 +14,7 @@ void printCycleSet(const cycle_set_t &cycset)
 
 void fprintCycleSet(FILE *stream, const cycle_set_t &cycset)
 {
-    for (auto row : cycset.matrix)
+    for (const auto& row : cycset.matrix)
     {
       for (auto value : row)
         fprintf(stream, "%d ", value);
@@ -23,7 +24,7 @@ void fprintCycleSet(FILE *stream, const cycle_set_t &cycset)
 
 void printPartiallyDefinedCycleSet(const cycle_set_t &cycset)
 {
-    for (auto row : cycset.matrix)
+    for (const auto& row : cycset.matrix)
     {
       for (auto value : row)
       {
@@ -42,7 +43,7 @@ void printPartiallyDefinedCycleSet(const cycle_set_t &cycset)
 
 void printDomains(const cycle_set_t &cycset)
 {
-    for (auto row : cycset.bitdomains)
+    for (const auto& row : cycset.bitdomains)
     {
       for (auto dom : row)
       {
@@ -77,7 +78,7 @@ void printAssignments(const cycle_set_t &cycset)
 
 void printCnf(cnf_t *cnf)
 {
-  for(auto cl : *cnf)
+  for(const auto& cl : *cnf)
   {
     for(auto lit: cl)
       printf("%d ", lit);
@@ -94,7 +95,7 @@ void part(int n, vector<int>& v, int level, vector<vector<int>>& parts){
     for(int i=0; i<=level; i++)
       if(v[i]!=1)
         p.push_back(v[i]);
-    if(p.size() != 0)
+    if(!p.empty())
       parts.push_back(p);
     
     int first=(level==0) ? 1 : v[level-1];
@@ -108,12 +109,12 @@ void part(int n, vector<int>& v, int level, vector<vector<int>>& parts){
 void makeDiagonals(vector<vector<int>>& parts, vector<vector<int>>& permutations)
 {
   vector<vector<vector<int>>> cycles;
-  for(size_t i = 0; i<parts.size(); i++)
+  for(auto & i : parts)
   {
     vector<int> part;
-    if(parts[i].size()==1)
+    if(i.size()==1)
     {
-      for(int j=0; j<parts[i][0]; j++)
+      for(int j=0; j<i[0]; j++)
         part.push_back(j);
       cycles.push_back(vector<vector<int>>{part});
       part.clear();
@@ -122,15 +123,15 @@ void makeDiagonals(vector<vector<int>>& parts, vector<vector<int>>& permutations
     {
       int toAdd=0;
       vector<vector<int>> cycs;
-      for(size_t j=0; j<parts[i].size();j++)
+      for(int j : i)
       {
-        for(int k=0; k<parts[i][j]; k++)
+        for(int k=0; k<j; k++)
         {
           part.push_back(k+toAdd);
         }
         cycs.push_back(part);
         part.clear();
-        toAdd+=parts[i][j];
+        toAdd+=j;
       }
       cycles.push_back(cycs);
       cycs.clear();
@@ -138,7 +139,7 @@ void makeDiagonals(vector<vector<int>>& parts, vector<vector<int>>& permutations
   }
 
   vector<int> perm=vector<int>();
-  for(auto part : cycles)
+  for(const auto& part : cycles)
   {
     for(int j=0; j<problem_size; j++)
       perm.push_back(j);
@@ -153,12 +154,12 @@ void makeDiagonals(vector<vector<int>>& parts, vector<vector<int>>& permutations
   }
 }
 
-vector<vector<int>> permToCyclePerm(vector<int> &perm){
+vector<vector<int>> permToCyclePerm(const vector<int> &perm){
   vector<vector<int>> cycles;
   vector<int> all = vector<int>(problem_size,-1);
   iota(all.begin(),all.end(),0);
   
-  while(all.size()!=0){
+  while(!all.empty()){
     int i = *min_element(all.begin(),all.end());
     vector<int> cycle=vector<int>();
     while (find(cycle.begin(),cycle.end(),i)==cycle.end()){
@@ -173,8 +174,8 @@ vector<vector<int>> permToCyclePerm(vector<int> &perm){
 
 void cycleToParts(vector<vector<int>> &perm, vector<int> &elOrd, vector<bool> &part){
   vector<bitdomain_t> parts = vector<bitdomain_t>(problem_size,bitdomain_t(problem_size,false));
-  for(auto cyc : perm){
-    int len = cyc.size();
+  for(const auto& cyc : perm){
+    int len = int(cyc.size());
     if(len!=0){
       for(int el : cyc)
         parts[len-1].set(el);
@@ -190,14 +191,15 @@ void cycleToParts(vector<vector<int>> &perm, vector<int> &elOrd, vector<bool> &p
   );
 
   vector<vector<int>> mins = vector<vector<int>>(parts.size(),vector<int>(2,0));
-  
-  for(int i=0; i<parts.size();i++){
+
+  int partsLen = int(parts.size());
+  for(int i=0; i<partsLen;i++){
     mins[i][1]=i;
     //mins[i][0]=*min_element(parts[i].dom.begin(),parts[i].dom.end());
     mins[i][0]=parts[i].firstel;
   }
 
-  sort(mins.begin(),mins.end(),[](vector<int>el1,vector<int>el2){return el1[0]<el2[0];});
+  sort(mins.begin(),mins.end(),[](const vector<int> &el1, const vector<int> &el2){return el1[0]<el2[0];});
 
   for(auto el : mins){
     bool first=true;
@@ -216,17 +218,16 @@ void cycleToParts(vector<vector<int>> &perm, vector<int> &elOrd, vector<bool> &p
   }
 }
 
-cyclePerm_t::cyclePerm_t(){ };
+cyclePerm_t::cyclePerm_t()= default;
 
-cyclePerm_t::cyclePerm_t(vector<int> perm){
+cyclePerm_t::cyclePerm_t(const vector<int>& perm){
   auto cycles = permToCyclePerm(perm);
   diag=perm;
-  int index = 0;
-  for(auto cyc : cycles){
+  for(const auto& cyc : cycles){
     bool first=true;
     for(int el : cyc){
       if(first){
-        part.push_back(cyc.size());
+        part.emplace_back(int(cyc.size()));
         first=false;
       }
       else{
@@ -278,6 +279,7 @@ int cyclePerm_t::permOf(int el){
         return element[i];
       }
     }
+    return -1;
   } else
     return element[el+1];
 }
@@ -289,19 +291,17 @@ int cyclePerm_t::invPermOf(int el){
         return element[i-1];
       }
     }
-  } else
+    return -1;
+  } else {
     return element[el-1];
+  }
 }
 
-pperm_plain::pperm_plain(){
-}
+pperm_plain::pperm_plain()= default;
 
-pperm_plain::~pperm_plain(){
-  /* delete[]&element;
-  delete[]&part; */
-}
+pperm_plain::~pperm_plain()= default;
 
-pperm_plain::pperm_plain(vector<int> perm){
+pperm_plain::pperm_plain(const vector<int>& perm){
   auto cyc = permToCyclePerm(perm);
   cycleToParts(cyc, element, part);
 }
@@ -340,7 +340,7 @@ bool pperm_plain::fix(int el, int img){
   }
   
   if(element[el]!=img){
-    int swp = find(element.begin(),element.end(),img)-element.begin();
+    int swp = int(find(element.begin(),element.end(),img)-element.begin());
     swap(element[el],element[swp]);
   }
         
@@ -357,7 +357,7 @@ int pperm_plain::permOf(int el){
 }
 
 int pperm_plain::invPermOf(int el){
-  int invEl = find(element.begin(),element.end(),el)-element.begin();
+  int invEl = int(find(element.begin(),element.end(),el)-element.begin());
   if(fixed(invEl)){
     return invEl;
   } else
@@ -436,7 +436,7 @@ vector<int> pperm_plain::invOptions(int el){
 }
 
 vector<pperm_bit> combinePerms(vector<pperm_bit> &perms){
-  int numPerms = perms.size();
+  int numPerms = int(perms.size());
   for(int i=0; i<numPerms; i++){
     for(int j=0; j<numPerms; j++){
       if(i==j)
@@ -452,7 +452,7 @@ vector<pperm_bit> combinePerms(vector<pperm_bit> &perms){
         }
       }
       if(totalDiffs==1){
-        for (std::size_t k=0; k<problem_size; ++k){
+        for (int k=0; k<problem_size; ++k){
           perms[i].info.dom[perms[i].info.chunk*diffIndex+2+k]=perms[i].info.dom[perms[i].info.chunk*diffIndex+2+k]^perms[j].info.dom[perms[j].info.chunk*diffIndex+2+k];
         }
         perms.erase(perms.begin()+j);
@@ -462,12 +462,12 @@ vector<pperm_bit> combinePerms(vector<pperm_bit> &perms){
   return perms;
 }
 
-pperm_bit::pperm_bit(vector<int> perm){
+pperm_bit::pperm_bit(const vector<int>& perm){
   auto cyc = permToCyclePerm(perm);
   vector<bitdomain_t> parts = vector<bitdomain_t>(problem_size,bitdomain_t(problem_size,false));
 
-  for(auto c : cyc){
-    int len = c.size();
+  for(const auto& c : cyc){
+    int len = int(c.size());
     if(len!=0){
       for(int el : c)
         parts[len-1].set(el);
@@ -484,23 +484,21 @@ pperm_bit::pperm_bit(vector<int> perm){
 
   info = bitdomains2_t(false);
   
-  for(int i=0; i<parts.size();i++){
-    if(!parts[i].none()){
-        vector<int> opts=parts[i].options();
+  for(auto & part : parts){
+    if(!part.none()){
+        vector<int> opts=part.options();
         for(int j : opts){
-          info.dom[info.chunk*j]=parts[i].firstel;
-          info.dom[info.chunk*j+1]=parts[i].numTrue;
+          info.dom[info.chunk*j]=part.firstel;
+          info.dom[info.chunk*j+1]=part.numTrue;
           int l=2;
-          for(auto k : parts[i].dom)
+          for(auto k : part.dom)
             info.dom[j*info.chunk+(l++)]=k;
         }
     }
   }
 }
-pperm_bit::pperm_bit(){
-}
-pperm_bit::~pperm_bit(){
-}
+pperm_bit::pperm_bit()= default;
+pperm_bit::~pperm_bit()= default;
 shared_ptr<pperm_common> pperm_bit::copyPerm(){
   return make_shared<pperm_bit>(pperm_bit(*this));
 }

@@ -3,7 +3,6 @@
  */
 #include "useful.h"
 #include "global.h"
-#include "solve.h"
 #include "solveGeneral.hpp"
 #include "cadical.hpp"
 
@@ -58,12 +57,12 @@ bool CommonInterface::checkMin(bool final)
   
   try
   {
-    if(!mincheck->preCheck(cycset,cycset_lits)){
+    if(!mincheck->preCheck(cycset)){
       mincheck->MinCheck(cycset);
       //checkMinimality(cycset,cycset_lits);
     }
   }
-  catch (clause_t c)
+  catch (clause_t &c)
   {
     stats.nSymBreakClauses+=1LL;
     addClause(c,true);
@@ -79,7 +78,7 @@ bool CommonInterface::checkMin(bool final)
       stats.PartCheckSucc+=1LL;
     }
   }
-  catch (vector<clause_t> cs)
+  catch (vector<clause_t> &cs)
   {
     //for(auto c : cs){
       stats.nClauses+=1LL;
@@ -121,10 +120,10 @@ bool CommonInterface::checkMin(bool final)
   } 
   catch (LimitReachedException)
   {
-    bool failed = true;
+    failed = true;
   }
 
-  if(fullDefined && !failed && allModels){
+  if(fullDefined && !failed){
     nModels++;
     if(!noEnum){
       fprintf(output,"Solution %d\n", nModels);
@@ -134,7 +133,7 @@ bool CommonInterface::checkMin(bool final)
     for (int i = 0; i < problem_size; i++)
       for (int j = 0; j < problem_size; j++)
       {
-        if(diagPart && i==j)
+        if(i==j)
               continue;
         for (int k = 0; k < problem_size; k++)
         {
@@ -190,65 +189,86 @@ bool CommonInterface::check()
     fprintCycleSet(output, cycset);
   }
 
-  if (allModels)
-  {
-    // exclude current cycle set
-    vector<lit_t> clause;
-    for (int i = 0; i < problem_size; i++)
-      for (int j = 0; j < problem_size; j++)
+  // exclude current cycle set
+  vector<lit_t> clause;
+  for (int i = 0; i < problem_size; i++)
+    for (int j = 0; j < problem_size; j++)
+    {
+      if(i==j)
+        continue;
+      for (int k = 0; k < problem_size; k++)
       {
-        if(diagPart && i==j)
-              continue;
-        for (int k = 0; k < problem_size; k++)
-        {
-          if (cycset.assignments[i][j][k] == True_t){
-            clause.push_back(-cycset_lits[i][j][k]);
-          }
+        if (cycset.assignments[i][j][k] == True_t){
+          clause.push_back(-cycset_lits[i][j][k]);
         }
       }
-    addClause(clause, false);
-    return false;
-  }
-  return true;
+    }
+  addClause(clause, false);
+  return false;
 }
 
 void CommonInterface::printStatistics()
 {
   printf("Time in propagator: %f\n", (stats.timePropagator));
-  printf("Calls propagator: %lld\n", stats.callsPropagator);
+  printf("Calls of propagator: %lld\n", stats.callsPropagator);
 
-  printf("Time in minimality check: %f\n", (stats.timeMinimalityCheck));
-  printf("Calls minimality check: %lld\n", (stats.callsFullCheck+stats.callsPartCheck));
-  printf("Number of symmetry breaking constraints: %lld\n", stats.nSymBreakClauses);
-  printf("Number of propagation constraints: %lld\n", stats.nPropClauses);
+  printf("Time spent on minimality checks: %f\n", (stats.timeMinimalityCheck));
+  printf("Number of minimality checks: %lld\n", (stats.callsFullCheck+stats.callsPartCheck));
+  printf("Number of added symmetry breaking constraints: %lld\n", stats.nSymBreakClauses);
 
-  printf("Time in minimality check -- Partial: %f\n", (stats.timePartMinimalityCheck));
-  printf("Calls of part check: %lld\n", stats.callsPartCheck);
-  printf("Calls of part check - sbc added: %lld\n", stats.PartCheckSucc);
-  printf("Calls of part check - nothing added: %lld\n", stats.PartCheckFail);
-  printf("Time of part check - sbc added: %f\n", (stats.PartCheckSuccTime));
-  printf("Time of part check - nothing added: %f\n", (stats.PartCheckFailTime));
+  printf("Time spent on partial minimality checks: %f\n", (stats.timePartMinimalityCheck));
+  printf("Number of partial minimality checks: %lld\n", stats.callsPartCheck);
+  printf("Number of partial minimality checks - symmetry breaking constraints added: %lld\n", stats.PartCheckSucc);
+  printf("Number of partial minimality checks - nothing added: %lld\n", stats.PartCheckFail);
+  printf("Time spent on partial minimality checks - symmetry breaking constraints added: %f\n", (stats.PartCheckSuccTime));
+  printf("Time spent on partial minimality checks - nothing added: %f\n", (stats.PartCheckFailTime));
 
-  printf("Time in minimality check -- Full: %f\n", (stats.timeFullMinimalityCheck));
-  printf("Calls of full check: %lld\n", stats.callsFullCheck);
-  printf("Calls of full check - sbc added: %lld\n", stats.FullCheckSucc);
-  printf("Calls of full check - nothing added: %lld\n", stats.FullCheckFail);
-  printf("Time of full check - sbc added: %f\n", (stats.FullCheckSuccTime));
-  printf("Time of full check - nothing added: %f\n", (stats.FullCheckFailTime));
-  if (allModels)
-    printf("Number of models: %d\n", nModels);
+  printf("Time spent on complete minimality checks: %f\n", (stats.timeFullMinimalityCheck));
+  printf("Number of complete minimality checks: %lld\n", stats.callsFullCheck);
+  printf("Number of complete minimality checks - symmetry breaking constraints added: %lld\n", stats.FullCheckSucc);
+  printf("Number of complete minimality checks - nothing added: %lld\n", stats.FullCheckFail);
+  printf("Time spent on complete minimality checks - symmetry breaking constraints added: %f\n", (stats.FullCheckSuccTime));
+  printf("Time spent on complete minimality checks - nothing added: %f\n", (stats.FullCheckFailTime));
+  
+  printf("Number of models: %d\n", nModels);
+}
+
+void CommonInterface::printStatistics(FILE *fp)
+{
+  fprintf(fp,"Time in propagator: %f\n", (stats.timePropagator));
+  fprintf(fp,"Calls of propagator: %lld\n", stats.callsPropagator);
+
+  fprintf(fp,"Time spent on minimality checks: %f\n", (stats.timeMinimalityCheck));
+  fprintf(fp,"Number of minimality checks: %lld\n", (stats.callsFullCheck+stats.callsPartCheck));
+  fprintf(fp,"Number of added symmetry breaking constraints: %lld\n", stats.nSymBreakClauses);
+
+  fprintf(fp,"Time spent on partial minimality checks: %f\n", (stats.timePartMinimalityCheck));
+  fprintf(fp,"Number of partial minimality checks: %lld\n", stats.callsPartCheck);
+  fprintf(fp,"Number of partial minimality checks - symmetry breaking constraints added: %lld\n", stats.PartCheckSucc);
+  fprintf(fp,"Number of partial minimality checks - nothing added: %lld\n", stats.PartCheckFail);
+  fprintf(fp,"Time spent on partial minimality checks - symmetry breaking constraints added: %f\n", (stats.PartCheckSuccTime));
+  fprintf(fp,"Time spent on partial minimality checks - nothing added: %f\n", (stats.PartCheckFailTime));
+
+  fprintf(fp,"Time spent on complete minimality checks: %f\n", (stats.timeFullMinimalityCheck));
+  fprintf(fp,"Number of complete minimality checks: %lld\n", stats.callsFullCheck);
+  fprintf(fp,"Number of complete minimality checks - symmetry breaking constraints added: %lld\n", stats.FullCheckSucc);
+  fprintf(fp,"Number of complete minimality checks - nothing added: %lld\n", stats.FullCheckFail);
+  fprintf(fp,"Time spent on complete minimality checks - symmetry breaking constraints added: %f\n", (stats.FullCheckSuccTime));
+  fprintf(fp,"Time spent on complete minimality checks - nothing added: %f\n", (stats.FullCheckFailTime));
+
+  fprintf(fp,"Number of models: %d\n", nModels);
 }
 
 void CommonInterface::solve()
 {
   // solve
-  printf("** Start solving\n");
+  //printf("** Start solving\n");
   fflush(stdout);
 
   // get a solve handle
-  int cubeCounter = 0;
-  solve(vector<int>());
+  auto assumps=vector<int>();
+  solve(assumps);
 
-  printf("** Search finished\n");
+  //printf("** Search finished\n");
   printStatistics();
 }

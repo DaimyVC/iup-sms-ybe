@@ -4,22 +4,31 @@
 #include "useful.h"
 
 extern int nextFreeVariable;
-extern bool allModels;
-extern bool diagPart;
-extern int fixedRow;
+
 extern int problem_size;
 extern int checkFreq;
 extern int maxDepth;
 extern int maxMC;
 extern int limDec;
 extern int limCon;
+extern int logging;
+extern int timelimit;
+extern int limCls;
 extern bool doFinalCheck;
 extern bool useBit;
-extern int logging;
 extern bool incrMincheck;
 extern bool allPart;
 extern bool noEnum;
-extern bool newIncr;
+extern bool propagateLiteralsCadical;
+extern bool checkSolutionInProp;
+extern bool smallerEncoding;
+extern bool propagateMincheck;
+extern bool oldBreakingClauses;
+extern bool saveState;
+extern bool readState;
+extern bool noCommander;
+extern string solOutput;
+extern string logOutput;
 
 
 #define COUNT_ASSIGNED 0
@@ -49,20 +58,4 @@ typedef struct
     long long hyperclauses=0;
 } statistics;
 
-extern const char **optionsClingo;
-extern int nOptionsClingo;
-extern int timelimit;
-extern bool propagateLiteralsCadical;
-extern bool checkSolutionInProp;
-extern bool smallerEncoding;
-extern bool propagateMincheck;
-extern bool oldBreakingClauses;
-extern string solOutput;
-extern bool saveState;
-extern bool readState;
-extern bool noCommander;
-
-extern string proofFile;
-
-extern FILE *addedClauses;
 #endif

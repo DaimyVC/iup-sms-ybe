@@ -10,23 +10,21 @@ MinCheck_V2::MinCheck_V2(){
 MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits){
     this->cycset_lits=cycset_lits;
     diagIsId=true;
-    if(diagPart){
-        this->diag=cyclePerm_t(diag);
-        for(int i=0; i<problem_size; i++){
-            if(this->diag.permOf(i)!=i){
-                diagIsId=false;
-            }
+    this->diag=cyclePerm_t(diag);
+    for(int i=0; i<problem_size; i++){
+        if(this->diag.permOf(i)!=i){
+            diagIsId=false;
         }
     }
-    if(useBit && diagPart)
+    if(useBit)
         initialPart = make_shared<pperm_bit>(pperm_bit(diag));
-    else if(diagPart)
+    else
         initialPart = make_shared<pperm_plain>(pperm_plain(diag));
-    else{ //kan ook voor id diag (is sneller), maar beter: initial part = rijen die id zijn?
+    /*else{ //kan ook voor id diag (is sneller), maar beter: initial part = rijen die id zijn?
         vector<int> initPerm = vector<int>(problem_size,-1);
-        iota(initPerm.begin(),initPerm.end(),0); 
+        iota(initPerm.begin(),initPerm.end(),0);
         initialPart = make_shared<pperm_plain>(pperm_plain(initPerm));
-    }
+    }*/
     if(incrMincheck){
         incrMinChecker=IncrMinCheck(this->diag,initialPart,diagIsId);
     }
@@ -105,7 +103,8 @@ bool MinCheck_V2::propagateDecision(shared_ptr<pperm_common> perm, int r){
     //ensure cycles match == ensure diag is fixed
 
     if(dec==r){
-        for(int i=1; i<cycle_og.size(); i++){
+        int cycle_size = int(cycle_og.size());
+        for(int i=1; i<cycle_size; i++){
             bool fixed = perm->fix(cycle_og[i],cycle_og[i]);
             if(!fixed)
                 return false;
@@ -124,8 +123,8 @@ bool MinCheck_V2::propagateDecision(shared_ptr<pperm_common> perm, int r){
         return true;
     } else { 
         auto cycle_perm = diag.cycle(dec);
-        int size = cycle_og.size();
-        if(cycle_perm.size()!=size)
+        int size = int(cycle_og.size());
+        if(int(cycle_perm.size())!=size)
             return false;
         for(int i=1; i<size;i++){
             bool fixed=perm->fix(cycle_og[i],cycle_perm[i]);
@@ -156,7 +155,8 @@ void MinCheck_V2::extendPerm(shared_ptr<pperm_common> perm){
 }
 
 void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &options, int r, vector<shared_ptr<pperm_common>> &options_prop){
-    for(int i=0; i<options.size();i++){
+    int num_opts = int(options.size());
+    for(int i=0; i<num_opts;i++){
         shared_ptr<pperm_common> copyPerm(nullptr);
         if(!perm->fixed(r)){
             copyPerm = perm->copyPerm();
@@ -395,7 +395,8 @@ void MinCheck_V2::filterOptions(shared_ptr<pperm_common> perm, vector<int> &opti
             if(copyPerm->permOf(0)==0 && copyPerm->permOf(r)==r)
                 break;
 
-            if(alreadyDefined.size()==permVal.numTrue){
+            int numDefs = int(alreadyDefined.size());
+            if(numDefs==permVal.numTrue){
                 if(maxel<minog){
                     extendPerm(copyPerm);
                     vector<int> p = copyPerm->getPerm();

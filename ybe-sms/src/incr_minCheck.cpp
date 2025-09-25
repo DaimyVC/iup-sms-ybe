@@ -2,12 +2,10 @@
 #include "solveCadicalClass.hpp"
 #include "global.h"
 #include "clause.h"
-#include<queue>
-#include<iterator>
 
-IncrMinCheck::IncrMinCheck(){};
+IncrMinCheck::IncrMinCheck()= default;
 
-IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPart, bool isId){
+IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
     partialSolver=new CaDiCaL::Solver();
     if (!partialSolver->configure("sat"))
         EXIT_UNWANTED_STATE
@@ -66,12 +64,12 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
         findPartialWitness(&part_cnf,part_nextFreeVariable);
     }
 
-    for (auto clause : part_cnf)
+    for (const auto& clause : part_cnf)
     {
-        if (clause.size() == 0)
+        if (clause.empty())
             EXIT_UNWANTED_STATE
 
-        for (auto lit : clause)
+        for (const auto lit : clause)
         {
             if (lit == 0)
                 EXIT_UNWANTED_STATE
@@ -91,12 +89,12 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
         
         findWitness(&comp_cnf,comp_nextFreeVariable);
 
-        for (auto clause : comp_cnf)
+        for (const auto& clause : comp_cnf)
         {
-            if (clause.size() == 0)
+            if (clause.empty())
                 EXIT_UNWANTED_STATE
 
-            for (auto lit : clause)
+            for (const auto lit : clause)
             {
                 if (lit == 0)
                     EXIT_UNWANTED_STATE
@@ -112,6 +110,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     }
 
     bool IncrMinCheck::solvePartial(cycle_set_t &assump){
+        auto assumptions=vector<lit_t>{};
         for(int row = 0; row<problem_size; row++){
             for(int col=0; col<problem_size;col++){
                 if(row==col)
@@ -142,9 +141,8 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
         return res==10;
     }
 
-    bool IncrMinCheck::solveComplete(cycle_set_t &assump){
-        /* printf("-----------------------------\n");
-        printCycleSet(assump); */
+    bool IncrMinCheck::solveComplete(const cycle_set_t &assump){
+        auto assumptions=vector<lit_t>{};
         for(int row = 0; row<problem_size; row++){
             for(int col=0; col<problem_size;col++){
                 if(row==col)
@@ -176,7 +174,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     }
 
     vector<int> IncrMinCheck::extractPartialPerm(){
-        vector<int> perm = vector<int>(problem_size,-1);
+        auto perm = vector<int>(problem_size,-1);
         if(partialSolver->state()==32){
             for(int i = 0; i<problem_size; i++){
                 for(int j : initialPart->options(i)){
@@ -191,7 +189,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, shared_ptr<pperm_common> initialPa
     }
 
     vector<int> IncrMinCheck::extractCompletePerm(){
-        vector<int> perm = vector<int>(problem_size,-1);
+        auto perm = vector<int>(problem_size,-1);
         if(comp_Solver->state()==32){
             for(int i = 0; i<problem_size; i++){
                 for(int j : initialPart->options(i)){

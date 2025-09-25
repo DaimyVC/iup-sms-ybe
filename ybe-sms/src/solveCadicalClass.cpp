@@ -5,7 +5,7 @@
 #include "minCheck_V2.h"
 
 // add formula and register propagator
-CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, vector<int> firstRow, vector<vector<vector<lit_t>>> lits, statistics stats)
+CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, const vector<int>& firstRow, const vector<vector<vector<lit_t>>>& lits, const statistics &stats)
 {
     this->highestVariable = highestVariable;
     this->cycset_lits=lits;
@@ -15,7 +15,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
     currentCycleSet = cycle_set_t(problem_size,lits);
     fixedCycleSet = vector<vector<vector<bool>>>(problem_size, vector<vector<bool>>(problem_size, vector<bool>(problem_size, false)));
     // The root-level of the trail is always there
-    current_trail.push_back(std::vector<int>());
+    current_trail.emplace_back();
 
     if(!noEnum){
         string outputFilePath;
@@ -23,12 +23,11 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
         outputFilePath.append("sols_");
         outputFilePath.append(to_string(problem_size));
         outputFilePath.append("_");
-        for(auto d : diag)
+        for(const auto d : diag)
             outputFilePath.append(to_string(d));
         outputFilePath.append(".txt");
 
-        FILE *fp;
-        fp = fopen(outputFilePath.c_str(),"w");
+        FILE *fp = fopen(outputFilePath.c_str(), "w");
         this->output=fp;
     }
 
@@ -99,19 +98,19 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++)
-                if(!diagPart || (!smallerEncoding||(i!=j && k!=diag[i])))
+                if((!smallerEncoding||(i!=j && k!=diag[i])))
                 {
                     lit2entry.push_back(vector<int>{i,j,k});
                     highestEdgeVariable++;
                 }
 
     // add clauses to solver
-    for (auto clause : cnf)
+    for (const auto& clause : cnf)
     {
-        if (clause.size() == 0)
+        if (clause.empty())
             EXIT_UNWANTED_STATE
 
-        for (auto lit : clause)
+        for (const auto lit : clause)
         {
             if (lit == 0)
                 EXIT_UNWANTED_STATE
@@ -127,51 +126,18 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++)
-                if(!diagPart || (i!=j&&(!smallerEncoding||k!=diag[i])))
+                if((i!=j&&(!smallerEncoding||k!=diag[i])))
                     solver->add_observed_var(cycset_lits[i][j][k]);
 
     literal2clausePos = vector<vector<int>>(highestEdgeVariable + 1);
     literal2clauseNeg = vector<vector<int>>(highestEdgeVariable + 1);
 
-    if(diagPart)
-        fixDiag(diag);
+    fixDiag(diag);
 
-    if(fixedRow>0)
-        fixFirstRow(firstRow);
-
-    /* printCycleSet(currentCycleSet);
-    printDomains(currentCycleSet); */
-
-    /* if(readState){
-        ifstream toParse(secFilePath);
-        vector<vector<int>> toAdd;
-        string temp;
-        while (getline(toParse, temp)) {
-            istringstream buffer(temp);
-            vector<int> line((istream_iterator<int>(buffer)),istream_iterator<int>());
-            toAdd.push_back(line);
-        }
-
-        ifstream toParse2(sbcFilePath);
-        while (getline(toParse2, temp)) {
-            istringstream buffer(temp);
-            vector<int> line((istream_iterator<int>(buffer)),istream_iterator<int>());
-            toAdd.push_back(line);
-        }
-        for(auto c : toAdd){
-            for(int l : c){
-                solver->add(l);
-                printf("%d ",l);
-            }
-            printf("\n");
-        }
-    } */
         
     mincheck = new MinCheck_V2(diag,cycset_lits);
-
-    //mincheck = MinimalityChecker(diag,cycset_lits);
 }
-void CadicalSolver::fixDiag(vector<int> diag)
+void CadicalSolver::fixDiag(const vector<int> &diag)
 {
     for(int i=0; i<problem_size; i++){
         for(int k=0; k<problem_size; k++){
@@ -192,16 +158,16 @@ void CadicalSolver::fixDiag(vector<int> diag)
     }
 }
 
-void CadicalSolver::fixFirstRow(vector<int> firstRow)
+void CadicalSolver::fixFirstRow(const vector<int> &firstRow)
 {
     for(int k=0; k<problem_size; k++){
-        if(diagPart && k==0)
+        if(k==0)
             continue;
         currentCycleSet.bitdomains[0][k].set(firstRow[k]);
         fixedCycleSet[0][k][firstRow[k]]=true;
     }
     for(int k=0; k<problem_size; k++){
-        if(diagPart && k==1)
+        if (k==1)
             continue;
         currentCycleSet.bitdomains[1][k].set(firstRow[k]);
         fixedCycleSet[1][k][firstRow[k]]=true;
@@ -209,11 +175,11 @@ void CadicalSolver::fixFirstRow(vector<int> firstRow)
 }
 
 
-void CadicalSolver::solve(vector<int> assumptions)
+void CadicalSolver::solve(vector<int> &assumptions)
 {
     do
     {
-        for (auto lit : assumptions)
+        for (const auto lit : assumptions)
             solver->assume(lit);
         //solver->resources();
     } while (solver->solve() == 10);
@@ -223,7 +189,7 @@ void CadicalSolver::solve(vector<int> assumptions)
         fclose(output);
 }
 
-bool CadicalSolver::solve(vector<int>, int)
+bool CadicalSolver::solve(vector<int> &, int)
 {
     printf("Not implemented yet\n");
     EXIT_UNWANTED_STATE
