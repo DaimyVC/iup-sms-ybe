@@ -1,8 +1,6 @@
 #include "useful.h"
 #include "solveCadicalClass.hpp"
 
-class MinCheckCNF;
-
 class IncrMinCheck
 {
 public:
@@ -13,7 +11,6 @@ public:
     bool solve();
     vector<int> extractPartialPerm();
     vector<int> extractCompletePerm();
-    friend class MinCheckCNF;
 
 private:
     cyclePerm_t diag;
@@ -39,6 +36,9 @@ private:
     int comp_highestPermVar{};
     cnf_t comp_cnf;
     int comp_nextFreeVariable = 1;
+    vector<vector<vector<lit_t>>> comp_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<vector<lit_t>>> comp_perm_cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    vector<vector<lit_t>> comp_perm_lits = vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0));
 
     vector<vector<vector<lit_t>>> complete_cycset_lits;
     vector<vector<vector<lit_t>>> complete_perm_cycset_lits;
