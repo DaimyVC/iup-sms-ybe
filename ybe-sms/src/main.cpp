@@ -60,6 +60,7 @@ static struct argp_option options[] = {
     {"time",  403,  "TIMELIM",  0,    "Define a time limit for the main solver. !!ENUMERATION COULD BE INCOMPLETE!!"},
     {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
     {"log",  'l',  "FILE",  0,   "Write the log to the given file."},
+    {"logging",  405,  "VERBLEVEL",  OPTION_HIDDEN,   "FOR DEBUG ONLY"},
 
     {"allPart",  'p',    0,  0,  "Use only one incremental solver (with the partial encoding) for the minimality check. !!USE WITH INCREMENTAL APPROACH!!"   },
     {"incr",  'i',    0,  0,  "Use the incremental approach."   },
@@ -240,7 +241,7 @@ int main(int argc, char **argv)
 
     srand(static_cast<unsigned>(rseed));
 
-    printf("Enumerating Solutions\n");
+    //printf("Enumerating Solutions\n");
 
     // ASSIGN DEFAULTS
     int t=0;
