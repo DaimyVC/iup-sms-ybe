@@ -5,7 +5,7 @@ class IncrMinCheck
 {
 public:
     IncrMinCheck();
-    IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId);
+    IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId, order_t order);
     bool solvePartial(cycle_set_t &assump);
     bool solveComplete(const cycle_set_t &assump);
     bool solve();
@@ -16,7 +16,7 @@ private:
     cyclePerm_t diag;
     shared_ptr<pperm_common> initialPart;
     bool isId{};
-
+    order_t order;
     CaDiCaL::Solver *partialSolver{};
     vector<vector<int>> part_lit2entry;
     int part_highestOgCycsetVar{};

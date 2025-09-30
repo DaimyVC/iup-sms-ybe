@@ -30,48 +30,56 @@ int logging = 0;
 int limDec = -1;
 int limCon = -1;
 int limCls = -1;
+int limSBP = -1;
+bool oldSBP = false;
 bool noEnum = false;
 int rseed = 1771177;
+bool staticSBP = false;
 
 string solOutput="";
 string logOutput="";
+string SBPPath="";
 bool saveState = false;
 bool readState = false;
 
 auto diagonal=vector<int>();
-auto firstRow=vector<int>();
 
 const char *argp_program_version="YBE-SMS 1.0";
 const char *argp_program_bug_address ="<daimy.vancaudenberg@kuleuven.be>";
 static char doc[] = "YBE-SMS - A tool for the enumeration of set-theoretic solutions to the Yang-Baxter equation.";
 static struct argp_option options[] = {
-    {"noEnum",  'n',    0,  0,  "Only count solutions, do not save them in a database."   },
-    {"size",  's',    "SIZE",  0,  "Use the incremental approach."   },
-    {"diag",  200,  "DIAG",   OPTION_ARG_OPTIONAL, "Fixes the given array (f.e. --diag 0,1,2,3,) on the diagonal. If no diagonal is given, all diagonals are solved in parallel."},
+    {"noEnum",  'n',    0,  0,  "Only count solutions, do not save them in a database.", 0},
+    {"size",  's',    "SIZE",  0,  "Use the incremental approach.", 0   },
+    {"diag",  200,  "DIAG",   OPTION_ARG_OPTIONAL, "Fixes the given array (f.e. --diag 0,1,2,3,) on the diagonal. If no diagonal is given, all diagonals are solved in parallel.", 0},
 
-    {"noCommander",  300,  0,  0,   "Don't use the commander encoding for the exactly one constraints."},
-    {"smallerEncoding",  301,  0,  0,   "Use an encoding that is optimized by propagating the information obtained by fixing the diagonal."},
-    {"useBit",  302,  0,  OPTION_HIDDEN,   ""},
-    {"oldBreak",  303,  0,  0,   "Do not use the breaking clauses that are optimized using the available domain knowledge."},
+    {"noCommander",  300,  0,  0,   "Don't use the commander encoding for the exactly one constraints.", 0},
+    {"smallerEncoding",  301,  0,  0,   "Use an encoding that is optimized by propagating the information obtained by fixing the diagonal.", 0},
+    {"useBit",  302,  0,  OPTION_HIDDEN,   "", 0},
+    {"oldBreak",  303,  0,  0,   "Do not use the breaking clauses that are optimized using the available domain knowledge.", 0},
 
-    {"checkSols",  400,  0,  0,   "Check partial solutions for their minimality."},
-    {"propLits",  401,  0,  0,    ""},
-    {"checkFreq",  402,  "FREQ",  0,   "If partial solutions are checked, define the frequency with which to check partial solutions."},
-    {"time",  403,  "TIMELIM",  0,    "Define a time limit for the main solver. !!ENUMERATION COULD BE INCOMPLETE!!"},
-    {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file."},
-    {"log",  'l',  "FILE",  0,   "Write the log to the given file."},
-    {"logging",  405,  "VERBLEVEL",  OPTION_HIDDEN,   "FOR DEBUG ONLY"},
+    {"checkSols",  400,  0,  0,   "Check partial solutions for their minimality.", 0},
+    {"propLits",  401,  0,  0,    "", 0},
+    {"checkFreq",  402,  "FREQ",  0,   "If partial solutions are checked, define the frequency with which to check partial solutions.", 0},
+    {"time",  403,  "TIMELIM",  0,    "Define a time limit for the main solver. !!ENUMERATION COULD BE INCOMPLETE!!", 0},
+    {"out", 404, "FILE",  0,   "Write the enumerated solutions to the given file.", 0},
+    {"log",  'l',  "FILE",  0,   "Write the log to the given file.", 0},
+    {"logging",  405,  "VERBLEVEL",  OPTION_HIDDEN,   "FOR DEBUG ONLY", 0},
 
-    {"allPart",  'p',    0,  0,  "Use only one incremental solver (with the partial encoding) for the minimality check. !!USE WITH INCREMENTAL APPROACH!!"   },
-    {"incr",  'i',    0,  0,  "Use the incremental approach."   },
-    {"limDec",  500,    "DECLIM",  0,  "Limit the number of decisions made during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   },
-    {"limCon",  501,    "CONLIM",  0,  "Limit the number of conflicts encountered during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   },
-    {"limCls",  502,    "CLSLIM",  0,  "Limit the maximum length of clauses added during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   },
+    {"allPart",  'p',    0,  0,  "Use only one incremental solver (with the partial encoding) for the minimality check. !!USE WITH INCREMENTAL APPROACH!!"   , 0},
+    {"incr",  'i',    0,  0,  "Use the incremental approach.",0   },
+    {"limDec",  500,    "DECLIM",  0,  "Limit the number of decisions made during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   , 0},
+    {"limCon",  501,    "CONLIM",  0,  "Limit the number of conflicts encountered during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   , 0},
+    {"limCls",  502,    "CLSLIM",  0,  "Limit the maximum length of clauses added during partial incremental minimality checks. !!USED WITH INCREMENTAL APPROACH!!"   , 0},
+    {"limSBP",  506,    "LIMSBP",  0,  "Limit the maximum of aux vars introduced in statically added SBPs"   , 0},
+    {"oldSBP",  507,    0,  0,  "Limit the maximum of aux vars introduced in statically added SBPs"   , 0},
+    {"exportSBP",  503,    0,  0,  "Export the generated SBP files to an outputfile for use with readSBP !!USED WITH INCREMENTAL APPROACH!!"   , 0},
+    {"readSBP",  504,    "SBPFILE",  0,  "Read symmetries to break statically from the file on the given path!!USED WITH INCREMENTAL APPROACH!!"   , 0},
+    {"static",  505,    0,  0,  "Add static SBP !!USED WITH INCREMENTAL APPROACH!!"   , 0},
 
-    {"propagate",  600,  0,  0,   "Also propagate information (as opposed to only exclude non-minimal solutions). !!USE WITH BACKTRACKING APPROACH!!"},
-    {"maxDepth",  601,  "MAXDEPTH",  0,   "Define the maximum depth of the search tree during a partial minimality check. !!USE WITH BACKTRACKING APPROACH!!"},
-    {"maxMC",  602,  "MAXMC",  0,   "Define the maximum number of nodes visited in the search tree during a partial minimality check. !!USE WITH BACKTRACKING APPROACH!!"},
-    {0}
+    {"propagate",  600,  0,  0,   "Also propagate information (as opposed to only exclude non-minimal solutions). !!USE WITH BACKTRACKING APPROACH!!", 0},
+    {"maxDepth",  601,  "MAXDEPTH",  0,   "Define the maximum depth of the search tree during a partial minimality check. !!USE WITH BACKTRACKING APPROACH!!", 0},
+    {"maxMC",  602,  "MAXMC",  0,   "Define the maximum number of nodes visited in the search tree during a partial minimality check. !!USE WITH BACKTRACKING APPROACH!!", 0},
+    {0, 0, 0, 0, 0, 0},
 };
 
 static  int parse_opt(int key, char *arg, struct argp_state *state) {
@@ -188,6 +196,27 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
             limCls=i;
             break;
         }
+        case 503:
+            saveState=true;
+            break;
+        case 504:
+            SBPPath=arg;
+            break;
+        case 505:
+            staticSBP=true;
+            break;
+        case 506: {
+            int i = atoi(arg);
+            if (i < 1) {
+                argp_failure(state,1,0,"SBP limit %d should be larger than zero.", i);
+                break;
+            }
+            limSBP=i;
+            break;
+        }
+        case 507: 
+            oldSBP=true;
+            break;
         case 600:
             propagateMincheck=true;
             break;
@@ -220,7 +249,7 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
 
 int main(int argc, char **argv)
 {
-    struct argp argp = {options, parse_opt, 0, 0};
+    struct argp argp = {options, parse_opt, doc, 0, 0, 0, 0};
     argp_parse(&argp, argc, argv, 0, 0, 0);
 
     if ((limDec>0||limCon>0||limCls>0||allPart)&&!incrMincheck) {
@@ -241,8 +270,6 @@ int main(int argc, char **argv)
 
     srand(static_cast<unsigned>(rseed));
 
-    //printf("Enumerating Solutions\n");
-
     // ASSIGN DEFAULTS
     int t=0;
     for(int i=0; i<problem_size; i++)
@@ -262,7 +289,7 @@ int main(int argc, char **argv)
     }
 
     int old_stdout = dup(1);
-    FILE *fp1 = freopen(logFilePath.c_str(),"w",stdout);
+    freopen(logFilePath.c_str(),"w",stdout);
 
     if (diagonal.empty()){
         using namespace std::chrono;
@@ -296,10 +323,15 @@ int main(int argc, char **argv)
             int nextFree = 1;
 
             auto cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+            auto geq_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
 
             encodeEntries(&cnf, diag, nextFree, cycset_lits);
 
-            YBEClausesNew(&cnf, nextFree, cycset_lits, diag);
+            if(staticSBP && !oldSBP)
+                encodeOrder(&cnf, diag, nextFree, geq_lits, cycset_lits);
+
+            YBEClauses(&cnf, nextFree, cycset_lits, diag);
+
             // check if zero literal
             for (const auto& clause : cnf)
             {
@@ -317,7 +349,7 @@ int main(int argc, char **argv)
                     highestVariable = max(highestVariable, abs(lit));
             }
 
-            solver = new CadicalSolver(cnf, highestVariable,diag, vector<int>(), cycset_lits, stats);
+            solver = new CadicalSolver(cnf, highestVariable,diag, cycset_lits, geq_lits, stats);
             solver->solve();
             numSols[i]=solver->nModels;
 
@@ -356,11 +388,15 @@ int main(int argc, char **argv)
     cnf_t cnf;
     nextFreeVariable = 1;
 
-    vector<vector<vector<lit_t>>> cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    auto cycset_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
+    auto geq_lits = vector<vector<vector<lit_t>>>(problem_size, vector<vector<lit_t>>(problem_size, vector<lit_t>(problem_size, 0)));
 
     encodeEntries(&cnf, diagonal, nextFreeVariable, cycset_lits);
 
-    YBEClausesNew(&cnf,nextFreeVariable,cycset_lits,diagonal);
+    if(staticSBP && !oldSBP)
+        encodeOrder(&cnf, diagonal, nextFreeVariable, geq_lits, cycset_lits);
+        
+    YBEClauses(&cnf,nextFreeVariable,cycset_lits,diagonal);
 
     // check if zero literal
     for (const auto& clause : cnf)
@@ -379,7 +415,7 @@ int main(int argc, char **argv)
             highestVariable = max(highestVariable, abs(lit));
     }
 
-    solver = new CadicalSolver(cnf, highestVariable, diagonal, firstRow, cycset_lits, stats);
+    solver = new CadicalSolver(cnf, highestVariable, diagonal, cycset_lits, geq_lits, stats);
     solver->solve();
     totalModels=solver->nModels;
 

@@ -23,8 +23,10 @@ MinCheck_V2::MinCheck_V2(){
     return;
 }
 
-MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits){
+MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits, order_t order){
+    this->order = order;
     this->cycset_lits=cycset_lits;
+    this->counter=breakCounter();
     diagIsId=true;
     this->diag=cyclePerm_t(diag);
     for(int i=0; i<problem_size; i++){
@@ -41,8 +43,20 @@ MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_
         iota(initPerm.begin(),initPerm.end(),0);
         initialPart = make_shared<pperm_plain>(pperm_plain(initPerm));
     }*/
+   
+    // string SBPOutPath;
+    // SBPOutPath.append("SBP_");
+    // SBPOutPath.append(to_string(problem_size));
+    // SBPOutPath.append("_");
+    // for(const auto d : diag)
+    //     SBPOutPath.append(to_string(d));
+    // SBPOutPath.append(".txt");
+
+    // FILE *fp = fopen(SBPOutPath.c_str(), "w");
+    // SBPout = fp;
+
     if(incrMincheck){
-        incrMinChecker=IncrMinCheck(this->diag,initialPart,diagIsId);
+        incrMinChecker=IncrMinCheck(this->diag,initialPart,diagIsId,order);
     }
 }
 
@@ -59,12 +73,14 @@ void MinCheck_V2::MinCheck(cycle_set_t cycset){
         if(complete){
             if(incrMinChecker.solveComplete(cycset)){
                 vector<int> witness = incrMinChecker.extractCompletePerm();
-                permFullyDefinedCheck(witness,0,1);
+                auto& [i,j] = order.orderedCells[0];
+                permFullyDefinedCheck(witness,i,j);
             }
         } else {
             if(incrMinChecker.solvePartial(cycset)){
                 vector<int> witness = incrMinChecker.extractPartialPerm();
-                permFullyDefinedCheck(witness,0,1);
+                auto& [i,j] = order.orderedCells[0];
+                permFullyDefinedCheck(witness,i,j);
             }
         }
         

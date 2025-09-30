@@ -3,15 +3,16 @@
 #include "solveCadicalClass.hpp"
 #include "cadical.hpp"
 #include "minCheck_V2.h"
+#include "clause.h"
 
 // add formula and register propagator
-CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, const vector<int>& firstRow, const vector<vector<vector<lit_t>>>& lits, const statistics &stats)
+CadicalSolver::CadicalSolver(cnf_t &cnf, int highestCNFVariable, vector<int> diag, const vector<vector<vector<lit_t>>>& lits, const vector<vector<vector<lit_t>>>& g_lits, const statistics &stats)
 {
-    this->highestVariable = highestVariable;
+    this->highestCNFVariable = highestCNFVariable;
     this->cycset_lits=lits;
+    this->geq_lits=g_lits;
     this->stats=stats;
     this->diag=diag;
-    this->firstRow=firstRow;
     currentCycleSet = cycle_set_t(problem_size,lits);
     fixedCycleSet = vector<vector<vector<bool>>>(problem_size, vector<vector<bool>>(problem_size, vector<bool>(problem_size, false)));
     // The root-level of the trail is always there
@@ -31,52 +32,9 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
         this->output=fp;
     }
 
-    
-    /* string stateFilePath;
-    string secFilePath;
-    string sbcFilePath;
-    if(readState || saveState){
-        stateFilePath.append(solOutput);
-        stateFilePath.append("state_");
-        stateFilePath.append(to_string(problem_size));
-        stateFilePath.append("_");
-        for(auto d : diag)
-            stateFilePath.append(to_string(d));
-        stateFilePath.append(".txt");
-
-        FILE *sfp;
-        sfp = fopen(stateFilePath.c_str(),"a+");
-        this->state=sfp;
-
-        secFilePath.append(solOutput);
-        secFilePath.append("sec_");
-        secFilePath.append(to_string(problem_size));
-        secFilePath.append("_");
-        for(auto d : diag)
-            secFilePath.append(to_string(d));
-        secFilePath.append(".txt");
-
-        FILE *secfp;
-        secfp = fopen(secFilePath.c_str(),"a+");
-        this->sols=secfp;
-
-        sbcFilePath.append(solOutput);
-        sbcFilePath.append("sbc_");
-        sbcFilePath.append(to_string(problem_size));
-        sbcFilePath.append("_");
-        for(auto d : diag)
-            sbcFilePath.append(to_string(d));
-        sbcFilePath.append(".txt");
-
-        FILE *sbcfp;
-        sbcfp = fopen(sbcFilePath.c_str(),"a+");
-        this->sbc=sbcfp;
-    } */
-
     // only_propagating = false;
     solver = new CaDiCaL::Solver();
     
-    //solver->configure("plain");
     if (!solver->configure("unsat"))
         EXIT_UNWANTED_STATE
 
@@ -94,15 +52,69 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
 
     lit2entry.push_back(vector<int>{-1,-1,-1}); // dummy pair for index 0
      
-    highestEdgeVariable = 0;
+    highestYBEVariable = 0;
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++)
                 if((!smallerEncoding||(i!=j && k!=diag[i])))
                 {
                     lit2entry.push_back(vector<int>{i,j,k});
-                    highestEdgeVariable++;
+                    highestYBEVariable++;
                 }
+
+    //define order over YBEvariables
+    order_t order;
+
+    //OLD ORDER
+    for(int i=0; i<problem_size; i++){
+        for(int j=0; j<problem_size; j++){
+            if(i!=j){
+                order.orderedCells.push_back(pair<int,int>(i,j));
+                for(int k=problem_size-1;k>=0;k--){
+                    int lit=cycset_lits[i][j][k];
+                    if(lit!=0){}
+                        order.orderedLits.push_back(lit);
+                }
+            }
+        }
+    }
+
+    //Size-1 "compatible" order?
+    // for(int i=0; i<problem_size; i++){
+    //     for(int j=0; j<i; j++){
+    //         order.orderedCells.push_back(pair<int,int>(i,j)); 
+    //         order.orderedCells.push_back(pair<int,int>(j,i));
+    //     }
+    // }
+
+    //Statically break a selection of symmetries (if identity diagonal)
+    if(staticSBP){
+        if(SBPPath!=""){
+            FILE * SBPFile = fopen(SBPPath.c_str(),"r");
+            char line[4096];
+            while (fgets(line, sizeof(line), SBPFile)) {
+                vector<int> perm;
+                stringstream ss(line);
+                string num;
+                while (getline(ss, num, ',')) {
+                    perm.push_back(stoi(num));
+                }
+                if(perm.size()==problem_size){
+                    addStaticSBP(&cnf, this->highestCNFVariable, cycset_lits, geq_lits, diag, order, perm, limSBP,oldSBP);
+                }
+            }
+            fclose(SBPFile);
+        } else {
+            auto breakPerm = vector<int>(problem_size);
+            iota(breakPerm.begin(),breakPerm.end(),0);
+
+            for(int i=0; i<problem_size; i++){
+                swap(breakPerm[i],breakPerm[(i+1)%problem_size]);
+                addStaticSBP(&cnf, this->highestCNFVariable, cycset_lits, geq_lits, diag, order, breakPerm, limSBP, oldSBP);
+                swap(breakPerm[i],breakPerm[(i+1)%(problem_size)]);
+            }
+        }
+    }
 
     // add clauses to solver
     for (const auto& clause : cnf)
@@ -119,23 +131,20 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, 
         solver->add(0);
     }
 
-    
-
-    //solver->write_dimacs("ybe.cnf");
-
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
             for (int k = 0; k < problem_size; k++)
                 if((i!=j&&(!smallerEncoding||k!=diag[i])))
                     solver->add_observed_var(cycset_lits[i][j][k]);
 
-    literal2clausePos = vector<vector<int>>(highestEdgeVariable + 1);
-    literal2clauseNeg = vector<vector<int>>(highestEdgeVariable + 1);
+    literal2clausePos = vector<vector<int>>(highestYBEVariable + 1);
+    literal2clauseNeg = vector<vector<int>>(highestYBEVariable + 1);
 
     fixDiag(diag);
 
-        
-    mincheck = new MinCheck_V2(diag,cycset_lits);
+    mincheck = new MinCheck_V2(diag,cycset_lits,order);
+
+    
 }
 void CadicalSolver::fixDiag(const vector<int> &diag)
 {
@@ -158,22 +167,6 @@ void CadicalSolver::fixDiag(const vector<int> &diag)
     }
 }
 
-void CadicalSolver::fixFirstRow(const vector<int> &firstRow)
-{
-    for(int k=0; k<problem_size; k++){
-        if(k==0)
-            continue;
-        currentCycleSet.bitdomains[0][k].set(firstRow[k]);
-        fixedCycleSet[0][k][firstRow[k]]=true;
-    }
-    for(int k=0; k<problem_size; k++){
-        if (k==1)
-            continue;
-        currentCycleSet.bitdomains[1][k].set(firstRow[k]);
-        fixedCycleSet[1][k][firstRow[k]]=true;
-    }
-}
-
 
 void CadicalSolver::solve(vector<int> &assumptions)
 {
@@ -187,6 +180,8 @@ void CadicalSolver::solve(vector<int> &assumptions)
     
     if(!noEnum)
         fclose(output);
+
+    mincheck->counter.exportCounts(15);
 }
 
 bool CadicalSolver::solve(vector<int> &, int)

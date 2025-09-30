@@ -10,6 +10,7 @@
 #include <fstream>
 #include <chrono>
 #include <memory>
+#include <map>
 
 using namespace std;
 using namespace chrono;
@@ -20,7 +21,7 @@ typedef vector<clause_t> cnf_t;
 typedef vector<vector<vector<lit_t>>> matrixLits_t;
 typedef vector<vector<vector<vector<lit_t>>>> ybeLits_t;
 
-void printCnf(cnf_t *cnf);
+void printCnf(cnf_t *cnf, FILE* out);
 
 #define PRINT_CURRENT_LINE                            \
     printf("Line %d, file %s\n", __LINE__, __FILE__); \
@@ -37,6 +38,11 @@ typedef enum {
     False_t=0,
     Unknown_t=-1
 } truth_vals;
+
+typedef struct order_t {
+    vector<pair<int,int>> orderedCells=vector<pair<int,int>>();
+    vector<int> orderedLits=vector<int>();
+} order_t;
 
 typedef struct cycle_set_t{
     std::vector<vector<int>> matrix;
@@ -115,7 +121,9 @@ typedef struct cyclePerm_t{
     std::vector<int> element;
     std::vector<int> part;
     std::vector<int> diag;
+    int sz;
     cyclePerm_t(const std::vector<int>& perm);
+    cyclePerm_t(const std::vector<vector<int>>& perm);
     cyclePerm_t();
     int permOf(int p);
     int invPermOf(int p);
@@ -123,9 +131,25 @@ typedef struct cyclePerm_t{
     void print();
 } cyclePerm_t;
 
+typedef struct broken{
+    cycle_set_t cycset;
+    int r;
+    int c;
+    broken(cycle_set_t cycset, int r, int c);
+}broken;
+
+typedef struct breakCounter{
+    std::map<vector<int>,int> counts;
+    std::map<vector<int>,vector<broken>> brokens;
+    void addPerm(vector<int> p, cycle_set_t cycset, int r, int c);
+    void exportCounts(int n);
+    breakCounter();
+}breakCounter;
+
 vector<vector<int>> permToCyclePerm(const vector<int> &perm);
 void printCycleSet(const cycle_set_t &cycset);
 void fprintCycleSet(FILE *stream, const cycle_set_t &cycset);
+void fprintPermCycleSet(FILE *stream, const cycle_set_t &cycset, vector<int> perm);
 void printPartiallyDefinedCycleSet(const cycle_set_t &cycset);
 void printDomains(const cycle_set_t &cycset);
 void printAssignments(const cycle_set_t &cycset);
@@ -133,4 +157,5 @@ void part(int n, vector<int>& v, int level, vector<vector<int>>& parts);
 void makeDiagonals(vector<vector<int>>& parts, vector<vector<int>>& permutations);
 void cycleToParts(vector<vector<int>> &perm, vector<int> &ord, vector<bool> &part);
 vector<pperm_bit> combinePerms(vector<pperm_bit> &validOptions);
+vector<int> reduceDiag(vector<int> ogDiag);
 #endif

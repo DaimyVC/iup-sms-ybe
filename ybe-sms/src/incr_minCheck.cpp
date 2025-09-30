@@ -5,7 +5,7 @@
 
 IncrMinCheck::IncrMinCheck()= default;
 
-IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
+IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId, order_t order){
     partialSolver=new CaDiCaL::Solver();
     if (!partialSolver->configure("sat"))
         EXIT_UNWANTED_STATE
@@ -13,6 +13,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& in
     this->diag=diag;
     this->isId=isId;
     this->initialPart=initialPart;
+    this->order=order;
 
     part_lit2entry.push_back(vector<int>{-1,-1,-1});
     part_highestOgCycsetVar = 0;
@@ -47,7 +48,7 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& in
             part_highestPermVar++;
         }
 
-    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId);
+    findPartialWitness(&part_cnf,part_nextFreeVariable,part_cycset_lits,part_perm_cycset_lits,part_perm_lits,part_greater_lits,diag,initialPart,isId,order);
 
     for (const auto& clause : part_cnf)
     {
@@ -99,7 +100,15 @@ IncrMinCheck::IncrMinCheck(cyclePerm_t &diag, const shared_ptr<pperm_common>& in
                 comp_highestPermVar++;
             }
                 
-        findWitness(&comp_cnf,comp_nextFreeVariable,comp_cycset_lits,comp_perm_cycset_lits,comp_perm_lits,diag,initialPart,isId);
+        findWitness(&comp_cnf,comp_nextFreeVariable,comp_cycset_lits,comp_perm_cycset_lits,comp_perm_lits,diag,initialPart,isId,order);
+
+        // FILE* witnessFile = fopen("witnessfinder.cnf", "w");
+        // if (witnessFile) {
+        //     printCnf(&comp_cnf, witnessFile);
+        //     fclose(witnessFile);
+        // } else {
+        //     fprintf(stderr, "Failed to open witnessfinder.cnf for writing\n");
+        // }
 
         for (const auto& clause : comp_cnf)
         {

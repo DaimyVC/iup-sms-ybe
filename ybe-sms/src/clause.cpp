@@ -44,67 +44,24 @@ void encodeEntries(cnf_t *cnf, const vector<int> &d, int &nextFree, matrixLits_t
 }
 
 void encodeOrder(cnf_t *cnf, const vector<int> &d, int &nextFree, matrixLits_t &cycset_lits_ord, const matrixLits_t &cycset_lits)
-{   for (int i = 0; i < problem_size; i++)
-        for (int j = 0; j < problem_size; j++)
-        {
-            int prev=-1;
-            for (int k = 0; k < problem_size-1; k++)
-            {
-                if(i!=j && k!=d[i])
-                {
-                    cycset_lits_ord[i][j][k] = nextFree++;
-                    if(prev!=-1){
-                        clause_t cl;
-                        cl.push_back(-cycset_lits_ord[i][j][prev]);
-                        cl.push_back(cycset_lits_ord[i][j][k]);
-                        cnf->push_back(cl);
-                        prev=k;
+{   
+    for(int row=0;row<problem_size;row++){
+        for(int col=0;col<problem_size;col++){
+            if(row==col)
+                continue;
+            for(int val=1; val<problem_size;val++){
+                    cycset_lits_ord[row][col][val]=nextFree++;
+                    auto toAdd=vector<int>();
+                    for(int k=0;k<val;k++){
+                        if(k==d[row])
+                            continue;
+                        toAdd.push_back(cycset_lits[row][col][k]);
+                        cnf->push_back({-cycset_lits_ord[row][col][val],-cycset_lits[row][col][k]});
                     }
-                    clause_t cll;
-                    for(int l=0; l<=k; l++){
-                        if(l!=d[i]){
-                            clause_t cl = vector<int>{-cycset_lits[i][j][l],cycset_lits_ord[i][j][k]};
-                            cll.push_back(cycset_lits[i][j][l]);
-                            cnf->push_back(cl);
-                        }
-                    }
-                    cll.push_back(-cycset_lits_ord[i][j][k]);
-                    
-                    cnf->push_back(cll);
-                    if(prev==-1){
-                        prev=k;
-                    }
-                }
+                    toAdd.push_back(cycset_lits_ord[row][col][val]);
+                    cnf->push_back(toAdd);
             }
         }
-}
-
-void encodeEntries(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits)
-{
-    for(int i=0; i<problem_size; i++)
-        for(int j=0; j<problem_size; j++)
-            exactlyOne(cnf, cycset_lits[i][j], nextFree);
-
-    for(int i=0; i<problem_size; i++)
-        for(int k=0; k<problem_size; k++)
-        {
-            vector<int> to_encode;
-            //clause_t cl;
-            to_encode.reserve((problem_size));
-            for(int j=0; j<problem_size; j++)
-                {
-                    to_encode.emplace_back(cycset_lits[i][j][k]);
-                }
-            exactlyOne(cnf,to_encode,nextFree);
-        }
-
-    for(int i=0; i<problem_size; i++){
-        vector<int> to_encode;
-        to_encode.reserve(problem_size);
-        for(int k=0; k<problem_size; k++){
-            to_encode.emplace_back(cycset_lits[k][k][i]);
-        }
-        exactlyOne(cnf,to_encode,nextFree);
     }
 }
 
@@ -246,48 +203,7 @@ pair<int,cnf_t> commanderEncoding(vector<int> amo, int &nextFree)
     return make_pair(cmd,clauses);
 }
 
-void YBEClausesNew(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits)
-{
-    vector<matrixLits_t> ybe_lits = vector<matrixLits_t>(problem_size, matrixLits_t(problem_size, vector<vector<lit_t>>(problem_size,vector<lit_t>(problem_size,0))));
-    for (int i=0; i<problem_size; i++){
-        for (int j=i+1; j<problem_size; j++){
-            for(int k=0; k<problem_size; k++){
-                for(int b=0; b<problem_size; b++){
-                    ybe_lits[i][j][k][b]=nextFree++;
-                }
-                exactlyOne(cnf,ybe_lits[i][j][k],nextFree);
-            }
-        }
-    }
-    
-    for (int i=0; i<problem_size; i++){
-        for (int j=i+1; j<problem_size; j++){
-            for(int k=0; k<problem_size; k++){
-                for(int x=0; x<problem_size; x++){
-                    for(int y=0; y<problem_size; y++){
-                        for(int b=0; b<problem_size; b++){
-                            clause_t cl;
-                            cl.push_back(-cycset_lits[i][j][x]); //x!=d[i]
-                            cl.push_back(-cycset_lits[i][k][y]); //i==k->y=d[i], else y!=d[i]
-                            cl.push_back(-cycset_lits[x][y][b]); //x==y->b=d[i], else b!=d[i]
-                            cl.push_back(ybe_lits[i][j][k][b]);
-                            cnf->push_back(cl);
-
-                            cl.clear();
-                            cl.push_back(-cycset_lits[j][i][x]);
-                            cl.push_back(-cycset_lits[j][k][y]);
-                            cl.push_back(-cycset_lits[x][y][b]);
-                            cl.push_back(ybe_lits[i][j][k][b]);
-                            cnf->push_back(cl);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-void YBEClausesNew(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits, const vector<int> &diag)
+void YBEClauses(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits, const vector<int> &diag)
 {
     auto ybe_lits = ybeLits_t(problem_size, matrixLits_t(problem_size, vector<vector<lit_t>>(problem_size,vector<lit_t>(problem_size,0))));
     
@@ -345,31 +261,68 @@ void YBEClausesNew(cnf_t *cnf, int &nextFree, const matrixLits_t &cycset_lits, c
     }
 }
 
-void fixFirstRows(cnf_t *cnf, const matrixLits_t &cycset_lits, const vector<int> &firstRow, int n){
-    for(int j = 0; j<n; j++){
-        for(int i=0;i<problem_size;i++){
-            if(i==j)
-                continue;
-            clause_t cl;
-            cl.push_back(cycset_lits[j][i][firstRow[i]]);
-            cnf->push_back(cl);
-        }
+void addStaticSBP(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &geq_lits, vector<int> &diag, order_t order, vector<int> breakPerm, int lim, bool old){
+    vector<int> invPerm=vector<int>(problem_size);
+    for(int i=0; i<breakPerm.size(); i++){
+        invPerm[breakPerm[i]]=i;
     }
-}
-
-void unfixFirstRows(cnf_t *cnf, const matrixLits_t &cycset_lits, const vector<int> &firstRow, int n){
-    clause_t cl;
-    for(int j=0;j<n;j++){
-        for(int i=0;i<problem_size;i++){
-            if(i==j)
-                continue;
-            cl.push_back(-cycset_lits[j][i][firstRow[i]]);
-        }
-    }
+    
+    nextFree++;
+    
+    int auxprev=0;
+    int aux = nextFree++;
+    clause_t cl={aux};
     cnf->push_back(cl);
+    int first = aux;
+
+    if(!old){
+        for(auto &[r,c] : order.orderedCells){
+            auxprev=aux;
+            aux=nextFree++;
+            if(lim>0 && aux-first>=lim)
+                    return;
+            for(int val = 0; val<problem_size; val++){
+                if(val==0){
+                    if(diag[breakPerm[r]]!=breakPerm[val] && diag[r]!=val){
+                        cnf->emplace_back(vector<lit_t>{-auxprev,-cycset_lits[r][c][val],-cycset_lits[breakPerm[r]][breakPerm[c]][breakPerm[val]],aux});
+                    }
+                } else {
+                    if(cycset_lits[breakPerm[r]][breakPerm[c]][breakPerm[val-1]]!=0){
+                        cnf->emplace_back(vector<lit_t>{-auxprev,-geq_lits[r][c][val],-cycset_lits[breakPerm[r]][breakPerm[c]][breakPerm[val-1]]});
+                    }
+                    if(diag[breakPerm[r]]!=breakPerm[val] && diag[r]!=val){
+                        cnf->emplace_back(vector<lit_t>{-auxprev,-cycset_lits[r][c][val],-cycset_lits[breakPerm[r]][breakPerm[c]][breakPerm[val]],aux});
+                    }
+                }
+            }
+        }
+    } else {
+        for(auto &[row,col]: order.orderedCells){
+            for(int val=problem_size-1;val>=0;val--){
+                if(val==diag[row])
+                    continue;
+                if(lim>0 && aux-first>=lim)
+                    return;
+
+                auxprev=aux;
+                aux=nextFree++;
+                
+                int permVal = cycset_lits[breakPerm[row]][breakPerm[col]][breakPerm[val]];
+
+                if(permVal==0){
+                    cnf->push_back({-auxprev,-cycset_lits[row][col][val]});
+                    cnf->push_back({aux,-auxprev});
+                } else {
+                    cnf->push_back({-auxprev,-cycset_lits[row][col][val],cycset_lits[breakPerm[row]][breakPerm[col]][breakPerm[val]]});
+                    cnf->push_back({aux,-auxprev,-cycset_lits[row][col][val]});
+                    cnf->push_back({aux,-auxprev,cycset_lits[breakPerm[row]][breakPerm[col]][breakPerm[val]]});
+                }
+            }
+        }
+    }
 }
 
-void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
+void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId, order_t order){
     //Encode original matrix
     for (int i = 0; i < problem_size; i++)
         for (int j = 0; j < problem_size; j++)
@@ -514,29 +467,25 @@ void findWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLit
     int aux = nextFree++;
     clause_t cl={aux};
     cnf->push_back(cl);
-    for(int row=0;row<problem_size;row++){
-        for(int col=0;col<problem_size;col++){
-            if(row==col)
+    for(auto &[row,col]: order.orderedCells){
+        for(int val=problem_size-1;val>=0;val--){
+            if(val==diag.diag[row])
                 continue;
-            for(int val=problem_size-1;val>=0;val--){
-                if(val==diag.diag[row])
-                    continue;
-                auxprev=aux;
-                aux=nextFree++;
-                cnf->push_back({-auxprev,cycset_lits[row][col][val],-perm_cycset_lits[row][col][val]});
-                if((row!=problem_size-1) || (col!=problem_size-2) || (val!= (diag.diag[problem_size-1]==0?1:0))){
-                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
-                    cnf->push_back({aux,-auxprev,-perm_cycset_lits[row][col][val]});
-                } else {
-                    cnf->push_back({-auxprev,cycset_lits[row][col][val]});
-                    cnf->push_back({-auxprev,-perm_cycset_lits[row][col][val]});
-                }
+            auxprev=aux;
+            aux=nextFree++;
+            cnf->push_back({-auxprev,cycset_lits[row][col][val],-perm_cycset_lits[row][col][val]});
+            if((row!=order.orderedCells.back().first) || (col!=order.orderedCells.back().second) || (val!= (diag.diag[row]==0?1:0))){
+                cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                cnf->push_back({aux,-auxprev,-perm_cycset_lits[row][col][val]});
+            } else {
+                cnf->push_back({-auxprev,cycset_lits[row][col][val]});
+                cnf->push_back({-auxprev,-perm_cycset_lits[row][col][val]});
             }
         }
     }
 }
 
-void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
+void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId, order_t order){
 
     auto smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
     auto notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
@@ -698,232 +647,225 @@ void findPartialWitness(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, ma
     int numAdded=0;
     clause_t cl={aux};
     cnf->push_back(cl);
-    for(int row=0;row<problem_size;row++){
-        for(int col=0;col<problem_size;col++){
-            if(row==col)
+    for(auto& [row,col] : order.orderedCells){
+        for(int val=problem_size-1;val>=0;val--){
+            if(val==diag.diag[row])
                 continue;
-            for(int val=problem_size-1;val>=0;val--){
-                if(val==diag.diag[row])
-                    continue;
-                auxprev=aux;
-                aux=nextFree++;
-                if(val==0){
-                    numAdded+=1;
-                    if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
-                        cnf->push_back({aux,-auxprev,smaller[row][col][val]});
-                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
-                    } else {
-                        cnf->push_back({-auxprev,smaller[row][col][val]});
-                        cnf->push_back({-auxprev,cycset_lits[row][col][val]});
-                        goto end;
-                    }
-                }else{
-                    cnf->push_back({-auxprev,larger[row][col][val-1],smaller[row][col][val]});
-                    numAdded+=1;
-                    if(((row!=problem_size-1) || (col!=problem_size-2) || (val!=(diag.diag[problem_size-1]==0?1:0))) && (numAdded<maxMC)){
-                        cnf->push_back({aux,-auxprev,smaller[row][col][val]});
-                        cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
-                    } else {
-                        cnf->push_back({-auxprev,smaller[row][col][val]});
-                        cnf->push_back({-auxprev,cycset_lits[row][col][val]});
-                        goto end;
-                    }
+            auxprev=aux;
+            aux=nextFree++;
+            if(val==0){
+                numAdded+=1;
+                if(((row!=order.orderedCells.back().first) || (col!=order.orderedCells.back().second) || (val!=(diag.diag[row]==0?1:0))) && (numAdded<maxMC)){
+                    cnf->push_back({aux,-auxprev,smaller[row][col][val]});
+                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                } else {
+                    cnf->push_back({-auxprev,smaller[row][col][val]});
+                    cnf->push_back({-auxprev,cycset_lits[row][col][val]});
+                    break;
+                }
+            }else{
+                cnf->push_back({-auxprev,larger[row][col][val-1],smaller[row][col][val]});
+                numAdded+=1;
+                if(((row!=order.orderedCells.back().first) || (col!=order.orderedCells.back().second) || (val!=(diag.diag[row]==0?1:0))) && (numAdded<maxMC)){
+                    cnf->push_back({aux,-auxprev,smaller[row][col][val]});
+                    cnf->push_back({aux,-auxprev,cycset_lits[row][col][val]});
+                } else {
+                    cnf->push_back({-auxprev,smaller[row][col][val]});
+                    cnf->push_back({-auxprev,cycset_lits[row][col][val]});
+                    break;
                 }
             }
         }
     }
-
-    end:
-        return;
 }
 
-void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
+// void findPartialWitness2(cnf_t *cnf, int &nextFree, matrixLits_t &cycset_lits, matrixLits_t &perm_cycset_lits, vector<vector<lit_t>> &perm_lits, matrixLits_t &larger, cyclePerm_t &diag, const shared_ptr<pperm_common>& initialPart, bool isId){
     
-    auto smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
-    auto notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
+//     auto smaller=vector<vector<vector<int>>>(problem_size, vector<vector<int>>(problem_size, vector<int>(problem_size, 0)));
+//     auto notBroken=vector<vector<int>>(problem_size, vector<int>(problem_size, 0));
     
     
-    //Encode original matrix
-    for (int i = 0; i < problem_size; i++)
-        for (int j = 0; j < problem_size; j++)
-            for (int k = 0; k < problem_size; k++){
-                if((i==j) || (diag.diag[i]==k))
-                    continue;
-                cycset_lits[i][j][k] = nextFree++;
-            }
+//     //Encode original matrix
+//     for (int i = 0; i < problem_size; i++)
+//         for (int j = 0; j < problem_size; j++)
+//             for (int k = 0; k < problem_size; k++){
+//                 if((i==j) || (diag.diag[i]==k))
+//                     continue;
+//                 cycset_lits[i][j][k] = nextFree++;
+//             }
 
-    //og>x vars
-    for(int row=0; row<problem_size; row++){
-        for(int col=0; col<problem_size; col++){
-            if(row==col)
-                continue;
-            for(int val=0; val<problem_size; val++){
-                larger[row][col][val]=nextFree++;
-                auto toAdd=vector<int>();
-                for(int k=0;k<=val;k++){
-                    if(k==diag.diag[row])
-                        continue;
-                    toAdd.push_back(cycset_lits[row][col][k]);
-                    cnf->push_back({-larger[row][col][val],-cycset_lits[row][col][k]});
-                }
-                toAdd.push_back(larger[row][col][val]);
-                cnf->push_back(toAdd);
-            }
-        }
-    }
+//     //og>x vars
+//     for(int row=0; row<problem_size; row++){
+//         for(int col=0; col<problem_size; col++){
+//             if(row==col)
+//                 continue;
+//             for(int val=0; val<problem_size; val++){
+//                 larger[row][col][val]=nextFree++;
+//                 auto toAdd=vector<int>();
+//                 for(int k=0;k<=val;k++){
+//                     if(k==diag.diag[row])
+//                         continue;
+//                     toAdd.push_back(cycset_lits[row][col][k]);
+//                     cnf->push_back({-larger[row][col][val],-cycset_lits[row][col][k]});
+//                 }
+//                 toAdd.push_back(larger[row][col][val]);
+//                 cnf->push_back(toAdd);
+//             }
+//         }
+//     }
 
-    //Encode permuted matrix
-    for (int i = 0; i < problem_size; i++)
-        for (int j = 0; j < problem_size; j++)
-            for (int k = 0; k < problem_size; k++){
-                if((i==j) || (diag.diag[i]==k))
-                    continue;
-                perm_cycset_lits[i][j][k] = nextFree++;
-            }
+//     //Encode permuted matrix
+//     for (int i = 0; i < problem_size; i++)
+//         for (int j = 0; j < problem_size; j++)
+//             for (int k = 0; k < problem_size; k++){
+//                 if((i==j) || (diag.diag[i]==k))
+//                     continue;
+//                 perm_cycset_lits[i][j][k] = nextFree++;
+//             }
 
-    //perm<x vars
-    for(int row=0;row<problem_size;row++){
-        for(int col=0;col<problem_size;col ++){
-            if(row==col)
-                continue;
-            for(int val=0; val<problem_size;val++){
-                smaller[row][col][val]=nextFree++;
-                auto toAdd=vector<int>();
-                for(int k=val;k<problem_size;k++){
-                    if(k==diag.diag[row])
-                        continue;
-                    toAdd.push_back(perm_cycset_lits[row][col][k]);
-                    cnf->push_back({-smaller[row][col][val],-perm_cycset_lits[row][col][k]});
-                }
-                toAdd.push_back(smaller[row][col][val]);
-                cnf->push_back(toAdd);
-            }
-        }
-    }
+//     //perm<x vars
+//     for(int row=0;row<problem_size;row++){
+//         for(int col=0;col<problem_size;col ++){
+//             if(row==col)
+//                 continue;
+//             for(int val=0; val<problem_size;val++){
+//                 smaller[row][col][val]=nextFree++;
+//                 auto toAdd=vector<int>();
+//                 for(int k=val;k<problem_size;k++){
+//                     if(k==diag.diag[row])
+//                         continue;
+//                     toAdd.push_back(perm_cycset_lits[row][col][k]);
+//                     cnf->push_back({-smaller[row][col][val],-perm_cycset_lits[row][col][k]});
+//                 }
+//                 toAdd.push_back(smaller[row][col][val]);
+//                 cnf->push_back(toAdd);
+//             }
+//         }
+//     }
 
-    //Encode possible permutations
-    if(isId){
-        for(int i=0; i<problem_size;i++)
-            for(int j=0;j<problem_size;j++)
-                perm_lits[i][j]=nextFree++;
-    } else {
-        for(int i=0; i<problem_size;i++)
-            for(int j : initialPart->options(i))
-                perm_lits[i][j]=nextFree++;
-    }
+//     //Encode possible permutations
+//     if(isId){
+//         for(int i=0; i<problem_size;i++)
+//             for(int j=0;j<problem_size;j++)
+//                 perm_lits[i][j]=nextFree++;
+//     } else {
+//         for(int i=0; i<problem_size;i++)
+//             for(int j : initialPart->options(i))
+//                 perm_lits[i][j]=nextFree++;
+//     }
 
-    vector<int> to_encode = vector<int>{};
-    for(int i=0; i<problem_size;i++){
-        to_encode.push_back(-perm_lits[i][i]);
-    }
-    cnf->push_back(to_encode);
+//     vector<int> to_encode = vector<int>{};
+//     for(int i=0; i<problem_size;i++){
+//         to_encode.push_back(-perm_lits[i][i]);
+//     }
+//     cnf->push_back(to_encode);
 
-    //permutation should be well-defined
-    for(int i=0; i<problem_size;i++){
-        exactlyOne(cnf,perm_lits[i],nextFree);
-        to_encode.clear();
-        to_encode.reserve(problem_size);
-        for(int j=0; j<problem_size; j++){
-            to_encode.emplace_back(perm_lits[j][i]);
-        }
-        exactlyOne(cnf,to_encode,nextFree);
-    }
+//     //permutation should be well-defined
+//     for(int i=0; i<problem_size;i++){
+//         exactlyOne(cnf,perm_lits[i],nextFree);
+//         to_encode.clear();
+//         to_encode.reserve(problem_size);
+//         for(int j=0; j<problem_size; j++){
+//             to_encode.emplace_back(perm_lits[j][i]);
+//         }
+//         exactlyOne(cnf,to_encode,nextFree);
+//     }
 
-    //exclude impossible permutations if diagonal is not the identity
-    if(!isId){
-        for(int og=0; og<problem_size; og++){
-            auto cycle_og = diag.cycle(og);
-            for(int img : initialPart->options(og)){
-                if(og==img){
-                    for(auto i : cycle_og){
-                        if(i==og)
-                            continue;
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[i][i]}));
-                    }
-                } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
+//     //exclude impossible permutations if diagonal is not the identity
+//     if(!isId){
+//         for(int og=0; og<problem_size; og++){
+//             auto cycle_og = diag.cycle(og);
+//             for(int img : initialPart->options(og)){
+//                 if(og==img){
+//                     for(auto i : cycle_og){
+//                         if(i==og)
+//                             continue;
+//                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[i][i]}));
+//                     }
+//                 } else if(find(cycle_og.begin(),cycle_og.end(),img)!=cycle_og.end()){
                     
-                    int dist = static_cast<int>(find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin());
+//                     int dist = static_cast<int>(find(cycle_og.begin(),cycle_og.end(),img)-cycle_og.begin());
 
-                    int size = static_cast<int>(cycle_og.size());
-                    for(int i=1; i<size; i++){
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
-                    }
-                } else { 
-                    auto cycle_perm = diag.cycle(img);
-                    int size = static_cast<int>(cycle_og.size());
-                    for(int i=1; i<size;i++){
-                        cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
-                    }
-                }
-            }
-        }
-    }
+//                     int size = static_cast<int>(cycle_og.size());
+//                     for(int i=1; i<size; i++){
+//                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_og[(i+dist)%size]]}));
+//                     }
+//                 } else { 
+//                     auto cycle_perm = diag.cycle(img);
+//                     int size = static_cast<int>(cycle_og.size());
+//                     for(int i=1; i<size;i++){
+//                         cnf->push_back(vector<int>({-perm_lits[og][img],perm_lits[cycle_og[i]][cycle_perm[i]]}));
+//                     }
+//                 }
+//             }
+//         }
+//     }
     
-    //Encode relation between og cycle set and its permutation
-    for(int ogcol=0; ogcol<problem_size; ogcol++){
-        for(int pmcol:initialPart->options(ogcol)){
-            for(int ogrow=0; ogrow<problem_size; ogrow++){
-                if(ogcol==ogrow)
-                    continue;
-                for(int pmrow:initialPart->options(ogrow)){
-                    if(pmrow==pmcol)
-                        continue;
-                    for(int val=0;val<problem_size;val++){
-                        if(val==diag.diag[pmrow])
-                            continue;
-                        for(int pmval:initialPart->invOptions(val)){
-                            if(pmval==diag.diag[ogrow])
-                                continue;
-                            cnf->push_back({
-                                -perm_lits[ogcol][pmcol],
-                                -perm_lits[ogrow][pmrow],
-                                cycset_lits[pmrow][pmcol][val],
-                                -perm_lits[pmval][val],
-                                -perm_cycset_lits[ogrow][ogcol][pmval]
-                                });
-                            cnf->push_back({
-                                -perm_lits[ogcol][pmcol],
-                                -perm_lits[ogrow][pmrow],
-                                -cycset_lits[pmrow][pmcol][val],
-                                -perm_lits[pmval][val],
-                                perm_cycset_lits[ogrow][ogcol][pmval]
-                                });
-                        }   
-                    }
-                }
-            }
-        }
-    }
+//     //Encode relation between og cycle set and its permutation
+//     for(int ogcol=0; ogcol<problem_size; ogcol++){
+//         for(int pmcol:initialPart->options(ogcol)){
+//             for(int ogrow=0; ogrow<problem_size; ogrow++){
+//                 if(ogcol==ogrow)
+//                     continue;
+//                 for(int pmrow:initialPart->options(ogrow)){
+//                     if(pmrow==pmcol)
+//                         continue;
+//                     for(int val=0;val<problem_size;val++){
+//                         if(val==diag.diag[pmrow])
+//                             continue;
+//                         for(int pmval:initialPart->invOptions(val)){
+//                             if(pmval==diag.diag[ogrow])
+//                                 continue;
+//                             cnf->push_back({
+//                                 -perm_lits[ogcol][pmcol],
+//                                 -perm_lits[ogrow][pmrow],
+//                                 cycset_lits[pmrow][pmcol][val],
+//                                 -perm_lits[pmval][val],
+//                                 -perm_cycset_lits[ogrow][ogcol][pmval]
+//                                 });
+//                             cnf->push_back({
+//                                 -perm_lits[ogcol][pmcol],
+//                                 -perm_lits[ogrow][pmrow],
+//                                 -cycset_lits[pmrow][pmcol][val],
+//                                 -perm_lits[pmval][val],
+//                                 perm_cycset_lits[ogrow][ogcol][pmval]
+//                                 });
+//                         }   
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    //SBC
-    int prevrow=0;
-    int prevcol=0;
-    notBroken[prevrow][prevcol]=nextFree++;
-    cnf->push_back({notBroken[prevrow][prevcol]});
-    for(int r=0;r<problem_size;r++){
-        for(int c=0; c<problem_size; c++){
-            if(r==c)
-                continue;
+//     //SBC
+//     int prevrow=0;
+//     int prevcol=0;
+//     notBroken[prevrow][prevcol]=nextFree++;
+//     cnf->push_back({notBroken[prevrow][prevcol]});
+//     for(int r=0;r<problem_size;r++){
+//         for(int c=0; c<problem_size; c++){
+//             if(r==c)
+//                 continue;
 
-            notBroken[r][c]=nextFree++;
-            if((r==problem_size-1) && (c==problem_size-2)){
-                for(int v=0; v<problem_size; v++){
-                    if(v!=0&&v!=problem_size-1){
-                        cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
-                    }
-                }
-            } else {
-                for(int v=0; v<problem_size; v++){
-                    if(v!=0&&v!=problem_size-1){
-                        cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
-                    }
-                    if(v!=diag.diag[r]){
-                        cnf->push_back({-notBroken[prevrow][prevcol],-cycset_lits[r][c][v],-perm_cycset_lits[r][c][v],notBroken[r][c]});
-                    }
-                }
-            }
-            prevrow=r;
-            prevcol=c;
-        }
-    }
-}
+//             notBroken[r][c]=nextFree++;
+//             if((r==problem_size-1) && (c==problem_size-2)){
+//                 for(int v=0; v<problem_size; v++){
+//                     if(v!=0&&v!=problem_size-1){
+//                         cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
+//                     }
+//                 }
+//             } else {
+//                 for(int v=0; v<problem_size; v++){
+//                     if(v!=0&&v!=problem_size-1){
+//                         cnf->push_back({-notBroken[prevrow][prevcol],smaller[r][c][v+1],larger[r][c][v-1]});
+//                     }
+//                     if(v!=diag.diag[r]){
+//                         cnf->push_back({-notBroken[prevrow][prevcol],-cycset_lits[r][c][v],-perm_cycset_lits[r][c][v],notBroken[r][c]});
+//                     }
+//                 }
+//             }
+//             prevrow=r;
+//             prevcol=c;
+//         }
+//     }
+// }

@@ -15,10 +15,10 @@ private:
     bool redundant;
     bool changeInTrail = true; // checks whether the trail has changed since the last propagation step
 
-    int highestEdgeVariable;
+    int highestYBEVariable;
+    int highestCNFVariable;
     vector<vector<int>> lit2entry; // get for positive literal the corresponding edge
     vector<vector<int>> clauses;
-    int highestVariable;
     int checkMode = false; // if true solver has finished and clauses are added by the normal "incremental interface"
     cycle_set_t currentCycleSet = cycle_set_t(problem_size,cycset_lits);
     vector<vector<vector<bool>>> fixedCycleSet; // true if entry in currentMatrix is fixed.
@@ -27,10 +27,9 @@ private:
     vector<vector<int>> literal2clausePos; // for each edge variable store clause which was used the last time.
     vector<vector<int>> literal2clauseNeg; // for each negation of an edge variable
     void fixDiag(const vector<int> &diag);
-    void fixFirstRow(const vector<int> &firstRow);
-    
+        
 public:
-    CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, const vector<int>& firstRow, const vector<vector<vector<lit_t>>>& cycset_lits, const statistics &stats);
+    CadicalSolver(cnf_t &cnf, int highestVariable, vector<int> diag, const vector<vector<vector<lit_t>>>& cycset_lits, const vector<vector<vector<lit_t>>>& geq_lits, const statistics &stats);
     ~CadicalSolver() { solver->disconnect_external_propagator(); }
 
 protected: // virtual classes from common interface

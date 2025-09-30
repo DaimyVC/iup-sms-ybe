@@ -10,6 +10,8 @@ extern int checkFreq;
 extern int maxDepth;
 extern int maxMC;
 extern int limDec;
+extern int limSBP;
+extern bool oldSBP;
 extern int limCon;
 extern int logging;
 extern int timelimit;
@@ -29,6 +31,8 @@ extern bool readState;
 extern bool noCommander;
 extern string solOutput;
 extern string logOutput;
+extern string SBPPath;
+extern bool staticSBP;
 
 
 #define COUNT_ASSIGNED 0

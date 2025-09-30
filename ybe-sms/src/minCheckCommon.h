@@ -14,6 +14,9 @@ public:
     virtual void MinCheck(cycle_set_t /*cycset*/) { EXIT_UNWANTED_STATE };
     bool final;
     bool complete;
+    order_t order;
+    FILE *SBPout;
+    breakCounter counter;
 
 protected:
     cycle_set_t cycset;

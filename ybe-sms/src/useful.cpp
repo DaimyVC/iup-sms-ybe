@@ -1,6 +1,7 @@
 #include "useful.h"
 #include "global.h"
 #include <numeric>
+#include <set>
 
 void printCycleSet(const cycle_set_t &cycset)
 {
@@ -18,6 +19,19 @@ void fprintCycleSet(FILE *stream, const cycle_set_t &cycset)
     {
       for (auto value : row)
         fprintf(stream, "%d ", value);
+      fprintf(stream, "\n");
+    }
+}
+
+void fprintPermCycleSet(FILE *stream, const cycle_set_t &cycset, vector<int> perm){
+  vector<int> invperm = vector<int>(perm.size());
+  for(int i=0;i<perm.size();i++){
+    invperm[perm[i]]=i;
+  }
+  for (int r=0;r<problem_size;r++)
+    {
+      for (int c=0;c<problem_size;c++)
+        fprintf(stream, "%d ", invperm[cycset.matrix[perm[r]][perm[c]]]);
       fprintf(stream, "\n");
     }
 }
@@ -76,13 +90,13 @@ void printAssignments(const cycle_set_t &cycset)
     }
 }
 
-void printCnf(cnf_t *cnf)
+void printCnf(cnf_t *cnf,FILE* out)
 {
   for(const auto& cl : *cnf)
   {
     for(auto lit: cl)
-      printf("%d ", lit);
-    printf("\n\n");
+      fprintf(out, "%d ", lit);
+    fprintf(out, "\n");
   }
 }
 
@@ -172,6 +186,32 @@ vector<vector<int>> permToCyclePerm(const vector<int> &perm){
   return cycles;
 }
 
+vector<int> reduceDiag(vector<int> ogDiag){
+  auto cycles = permToCyclePerm(ogDiag);
+  cycles.erase(
+    std::remove_if(cycles.begin(), cycles.end(),
+        [ogDiag](const std::vector<int>& cycle) {
+            return std::find(cycle.begin(), cycle.end(), ogDiag.size()-1) != cycle.end();
+        }),
+    cycles.end()
+  );
+  std::set<int> present;
+  for (const auto& cycle : cycles)
+      for (int el : cycle)
+          present.insert(el);
+
+  // Add singleton cycles for missing elements
+  for (int el = 0; el < ogDiag.size()-2; el++) {
+      if (present.find(el) == present.end()) {
+          cycles.push_back({el});
+      }
+  }
+
+  auto newDiag = cyclePerm_t(cycles);
+  newDiag.print();
+  return newDiag.diag;
+}
+
 void cycleToParts(vector<vector<int>> &perm, vector<int> &elOrd, vector<bool> &part){
   vector<bitdomain_t> parts = vector<bitdomain_t>(problem_size,bitdomain_t(problem_size,false));
   for(const auto& cyc : perm){
@@ -236,7 +276,34 @@ cyclePerm_t::cyclePerm_t(const vector<int>& perm){
       element.push_back(el);
     }
   }
+  sz = perm.size();
+}
 
+cyclePerm_t::cyclePerm_t(const vector<vector<int>>& perm){
+  auto cycles = perm;
+  //diag=perm;
+  for(const auto& cyc : cycles){
+    bool first=true;
+    for(int el : cyc){
+      if(first){
+        part.emplace_back(int(cyc.size()));
+        first=false;
+      }
+      else{
+        part.push_back(0);
+      }
+      element.push_back(el);
+    }
+  }
+  
+  sz = 0;
+  for (const auto& cycle : cycles)
+      sz += cycle.size();
+  
+  diag = vector<int>();
+  for(int el=0; el<sz; el++){
+    diag.push_back(permOf(el));
+  }
 }
 
 void cyclePerm_t::print(){
@@ -257,10 +324,10 @@ vector<int> cyclePerm_t::cycle(int el){
     if(part[i]>0)
       p=i;
   }
-  if(p==el && (p==problem_size-1 || part[p+1]>0)){
+  if(p==el && (p==sz-1 || part[p+1]>0)){
     options.push_back(el);
   } else {
-    for(int i=el; i<problem_size; i++){
+    for(int i=el; i<sz; i++){
       if(i!=p && part[i]>0)
         break;
       options.push_back(i);
@@ -273,7 +340,7 @@ vector<int> cyclePerm_t::cycle(int el){
 }
 
 int cyclePerm_t::permOf(int el){
-  if(el+1>=problem_size || part[el+1]>0){
+  if(el+1>=sz || part[el+1]>0){
     for(int i = el; i>=0; i--){
       if(part[i]>0){
         return element[i];
@@ -570,6 +637,59 @@ vector<int> pperm_bit::getPerm(){
       perm[i]=-1;
   }
   return perm;
+}
+
+breakCounter::breakCounter(){
+  counts = map<vector<int>,int>();
+}
+
+void breakCounter::addPerm(vector<int> p, cycle_set_t cycset, int r, int c){
+  if(counts.count(p)!=0){
+    counts[p]+=1;
+    brokens[p].emplace_back(broken(cycset,r,c));
+  } else {
+    counts[p]=1;
+    brokens.emplace(p,vector<broken>());
+    brokens[p].emplace_back(broken(cycset,r,c));
+  }
+}
+
+void breakCounter::exportCounts(int n){
+  vector<pair<vector<int>, vector<broken>>> topN;
+  vector<pair<vector<int>, int>> allCounts(counts.begin(), counts.end());
+  partial_sort(
+    allCounts.begin(),
+    allCounts.begin() + min(n, int(allCounts.size())),
+    allCounts.end(),
+    [](const auto& a, const auto& b) { return a.second > b.second; }
+  );
+  for (int i = 0; i < min(n, int(allCounts.size())); ++i) {
+    topN.push_back(pair<vector<int>,vector<broken>>(allCounts[i].first,brokens[allCounts[i].first]));
+  }
+
+  FILE* outfile = fopen("permCounts.txt","w");
+  for (const auto& [perm, brs] : topN) {
+    vector<int>invperm=vector<int>(perm.size());
+    for (int i=0; i<perm.size();i++) {
+      fprintf(outfile,"%d,", perm[i]);
+      invperm[perm[i]]=i;
+    }
+    fprintf(outfile,"\t:%d\n", brs.size());
+    for (auto br : brs){
+      fprintf(outfile,"%d, %d\n",br.r,br.c);
+      fprintCycleSet(outfile,br.cycset);
+      fprintf(outfile,"---\n");
+      fprintPermCycleSet(outfile,br.cycset,perm);
+    }
+    fprintf(outfile,"--------------------------\n");
+  }
+  fclose(outfile);
+}
+
+broken::broken(cycle_set_t cycset, int r, int c){
+  this->cycset=cycset;
+  this->r=r;
+  this->c=c;
 }
 
 /* void pperm_bit::set(int e,int n){
