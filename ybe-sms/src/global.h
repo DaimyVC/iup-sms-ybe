@@ -21,6 +21,7 @@ extern bool useBit;
 extern bool incrMincheck;
 extern bool allPart;
 extern bool noEnum;
+extern bool indecomp;
 extern bool propagateLiteralsCadical;
 extern bool checkSolutionInProp;
 extern bool smallerEncoding;

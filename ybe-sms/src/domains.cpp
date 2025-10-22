@@ -374,6 +374,27 @@ vector<int> bitdomains3_t::options(int r, int c) {
 
 
 
+domInfo_t bitdomains2_t::analyzeDom(int e) {
+  auto opts = options(e);
+  if(opts.size()==0)
+    return {false,false,-1};
+  
+  int min = *min_element(opts.begin(),opts.end());
+  int max = *max_element(opts.begin(),opts.end());
+
+  bool cons = (max-min+1) == opts.size();
+
+  if(!cons)
+    return {false,false,0};
+
+  if(min==0) 
+    return {true,true,max+1};
+  else
+  return {true,false,min};
+}
+
+
+
 
 void bitdomains2_t::print(){
   for(auto i = 0; i<problem_size; i++){

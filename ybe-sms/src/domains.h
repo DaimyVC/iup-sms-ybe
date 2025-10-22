@@ -5,6 +5,12 @@
 
 using namespace std;
 
+struct domInfo_t {
+    bool isConsecutive;
+    bool isLessThan;  // true for <, false for >=
+    int threshold;
+};
+
 typedef struct bitdomain_t{
     vector<bool> dom;
     int size;
@@ -42,6 +48,7 @@ typedef struct bitdomains2_t{
     void reset(int e);
     bool none(int e);
     vector<int> options(int e);
+    domInfo_t analyzeDom(int e);
 
     void print();
 } bitdomains2_t;

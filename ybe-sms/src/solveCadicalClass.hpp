@@ -93,6 +93,18 @@ protected: // virtual classes from common interface
     void addClause(const vector<lit_t> &clause, bool redundant)
     {
         //printf("size clause: %d\n",clause.size());
+        if(logging>=2){
+            printf("ADDING CLAUSE!\n");
+            for(auto lit : clause){
+                auto entry = lit2entry[abs(lit)];
+                if(lit<0){
+                    printf("M%d,%d!=%d OR ",entry[0],entry[1],entry[2]);
+                } else {
+                    printf("M%d,%d=%d OR ",entry[0],entry[1],entry[2]);
+                }
+            }
+            printf("\n");
+        }
         if (!checkMode)
             this->clauses.push_back(clause);
         else

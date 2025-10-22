@@ -29,6 +29,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestCNFVariable, vector<int> dia
         outputFilePath.append(".txt");
 
         FILE *fp = fopen(outputFilePath.c_str(), "w");
+        setvbuf(fp, NULL, _IOFBF, 5 * 1024 * 1024);
         this->output=fp;
     }
 
@@ -87,7 +88,7 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestCNFVariable, vector<int> dia
     //     }
     // }
 
-    //Statically break a selection of symmetries (if identity diagonal)
+    //Statically break a selection of symmetries
     if(staticSBP){
         if(SBPPath!=""){
             FILE * SBPFile = fopen(SBPPath.c_str(),"r");
@@ -108,10 +109,35 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestCNFVariable, vector<int> dia
             auto breakPerm = vector<int>(problem_size);
             iota(breakPerm.begin(),breakPerm.end(),0);
 
-            for(int i=0; i<problem_size; i++){
-                swap(breakPerm[i],breakPerm[(i+1)%problem_size]);
-                addStaticSBP(&cnf, this->highestCNFVariable, cycset_lits, geq_lits, diag, order, breakPerm, limSBP, oldSBP);
-                swap(breakPerm[i],breakPerm[(i+1)%(problem_size)]);
+            vector<bool> fixedByDiag=vector<bool>(problem_size,false);
+            for(int i = 0; i<problem_size; i++)
+                fixedByDiag[i]=diag[i]==i;
+
+            cyclePerm_t cycDiag = cyclePerm_t(diag);
+            int i=0;
+            while(i<problem_size){
+                auto cycle = cycDiag.cycle(i);
+                sort(cycle.begin(),cycle.end());
+                auto minel = cycle[0];
+                auto maxel = cycle.back();
+                //use odd-length cycle
+                if(minel==maxel){
+                    //fixed element
+                    //is it swappable with other fixed elements?
+                    if(fixedByDiag[(i+1)%problem_size]){
+                        swap(breakPerm[i],breakPerm[(i+1)%problem_size]);
+                        addStaticSBP(&cnf, this->highestCNFVariable, cycset_lits, geq_lits, diag, order, breakPerm, limSBP, oldSBP);
+                        swap(breakPerm[i],breakPerm[(i+1)%(problem_size)]);
+                    }
+                    i+=1;
+                } else {
+                    for(int el=0; el<cycle.size(); el++){
+                        breakPerm[cycle[el]]=cycle[(el+1)%cycle.size()];
+                    }
+                    addStaticSBP(&cnf, this->highestCNFVariable, cycset_lits, geq_lits, diag, order, breakPerm, limSBP, oldSBP);
+                    iota(breakPerm.begin(),breakPerm.end(),0);
+                    i=maxel+1;
+                }
             }
         }
     }
@@ -141,8 +167,10 @@ CadicalSolver::CadicalSolver(cnf_t &cnf, int highestCNFVariable, vector<int> dia
     literal2clauseNeg = vector<vector<int>>(highestYBEVariable + 1);
 
     fixDiag(diag);
+    
+    mincheck = new MinCheck_V2(diag,cycset_lits,g_lits,order);
 
-    mincheck = new MinCheck_V2(diag,cycset_lits,order);
+    //printCnf(&cnf,output);
 
     
 }

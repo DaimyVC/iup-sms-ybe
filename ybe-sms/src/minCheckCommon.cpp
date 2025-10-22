@@ -1,5 +1,6 @@
 #include "minCheckCommon.h"
 #include "global.h"
+#include "transCheck.hpp"
 #include<tuple>
 #include<algorithm>
 #include<iterator>
@@ -22,6 +23,10 @@ bool MinCheckCommon::preCheck(cycle_set_t &cycset){
             if(cycset.matrix[i][j]!=j)
                 isID=false;
         }
+    }
+    if(indecomp){     
+        auto transCheck = TransitivityCheck();
+        transCheck.preventDecomposable(cycset);
     }
     return isID;
 }
@@ -258,7 +263,20 @@ void MinCheckCommon::addClauses(const vector<int> &perm, int r, int c)
 void MinCheckCommon::toClause(vector<bitdomains2_t> &lits, vector<int> &cls){
     for(int r=0;r<problem_size;r++){
         for(int c=0;c<problem_size;c++){
-            if(smallerEncoding && lits[r].numtrue(c)==problem_size-2){
+            int numTrue = lits[r].numtrue(c);
+            if(numTrue == 0)
+                continue;
+
+            //auto [consec, lessThan, val] = lits[r].analyzeDom(c);
+            // if(consec && lessThan){
+            //     printf("%d,%d < %d => %d\n",r,c,val,-1*geq_lits[r][c][val]);
+            //     cls.push_back(-1*geq_lits[r][c][val]);
+            // } else if (consec){
+            //     printf("%d,%d >= %d => %d\n",r,c,val,geq_lits[r][c][val]);
+            //     cls.push_back(geq_lits[r][c][val]);
+            // } else 
+            
+            if(smallerEncoding && numTrue==problem_size-2){
                 for(int i=0;i<problem_size;i++){
                     if(i!=cycset.matrix[r][r]&& !lits[r].get(c,i)){
                         cls.push_back(-cycset_lits[r][c][i]);
@@ -267,7 +285,7 @@ void MinCheckCommon::toClause(vector<bitdomains2_t> &lits, vector<int> &cls){
                             printf("-M_%d_%d_%d\n",r,c,i);
                     }
                 }
-            } else if(!smallerEncoding && lits[r].numtrue(c)==problem_size-1){
+            } else if(!smallerEncoding && numTrue==problem_size-1){
                 for(int i=0;i<problem_size;i++){
                     if(!lits[r].get(c,i)){
                         cls.push_back(-cycset_lits[r][c][i]);
@@ -276,7 +294,7 @@ void MinCheckCommon::toClause(vector<bitdomains2_t> &lits, vector<int> &cls){
                             printf("-M_%d_%d_%d\n",r,c,i);
                     }
                 }
-            } else if(lits[r].numtrue(c)>0){
+            } else {
                 for(auto l : lits[r].options(c)){
                     cls.push_back(cycset_lits[r][c][l]);
                     //fprintf(SBPout,"%d,%d,%d,%d;",1,r,c,l);

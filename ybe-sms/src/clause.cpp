@@ -65,6 +65,32 @@ void encodeOrder(cnf_t *cnf, const vector<int> &d, int &nextFree, matrixLits_t &
     }
 }
 
+void enforceNoFixedEntries(cnf_t *cnf, const vector<int> &d, const matrixLits_t &cycset_lits)
+{   
+    for(int n=0;n<problem_size;n++){
+        clause_t cls = clause_t();
+        bool trivial=false;
+        for(int r=0;r<problem_size;r++){
+            if(r==n){
+                if(d[r]!=n){
+                    trivial=true;
+                    break;
+                }
+            }
+            else{
+                if(d[r]==n){
+                    trivial=true;
+                    break;
+                }
+                else
+                    cls.push_back(-cycset_lits[r][n][n]);
+            }
+        }
+        if(!trivial)
+            cnf->push_back(cls);
+    }
+}
+
 void exactlyOne(cnf_t *cnf, const vector<int>& eo, int &nextFree)
 {
     auto toEO=vector<int>();

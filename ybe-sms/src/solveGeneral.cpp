@@ -28,11 +28,14 @@ bool CommonInterface::propagate()
 
 bool CommonInterface::checkMin(bool final)
 {
-
   auto start = steady_clock::now();
   bool res = true;
   cycle_set_t cycset = getCycleSet();
-  
+  if(logging>0){
+      printf("(MIN)CHECK!!!!!!!\n");
+      printPartiallyDefinedCycleSet(cycset);
+      printDomains(cycset);
+  }
   bool fullDefined = true;
   for(auto i = problem_size-1; i>=0; i--){
     for(auto j=problem_size-1; j>=0; j--){

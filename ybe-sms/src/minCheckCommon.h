@@ -21,6 +21,7 @@ public:
 protected:
     cycle_set_t cycset;
     vector<vector<vector<lit_t>>> cycset_lits;
+    vector<vector<vector<lit_t>>> geq_lits;
     cyclePerm_t diag;
     shared_ptr<pperm_common> initialPart;
     bool diagIsId;

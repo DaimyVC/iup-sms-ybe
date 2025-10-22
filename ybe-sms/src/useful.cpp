@@ -92,6 +92,7 @@ void printAssignments(const cycle_set_t &cycset)
 
 void printCnf(cnf_t *cnf,FILE* out)
 {
+  //fprintf(out, "p %d %d\n", 2, cnf->size());
   for(const auto& cl : *cnf)
   {
     for(auto lit: cl)

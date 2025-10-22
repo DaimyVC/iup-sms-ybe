@@ -14,6 +14,7 @@ int timelimit = -1;
 clock_t startOfSolving;
 bool incrMincheck = false;
 bool allPart = false;
+bool indecomp = false;
 bool propagateMincheck = false;
 bool oldBreakingClauses = false;
 bool propagateLiteralsCadical = false;
@@ -51,6 +52,7 @@ static struct argp_option options[] = {
     {"noEnum",  'n',    0,  0,  "Only count solutions, do not save them in a database.", 0},
     {"size",  's',    "SIZE",  0,  "Use the incremental approach.", 0   },
     {"diag",  200,  "DIAG",   OPTION_ARG_OPTIONAL, "Fixes the given array (f.e. --diag 0,1,2,3,) on the diagonal. If no diagonal is given, all diagonals are solved in parallel.", 0},
+    {"indecomposable",  201,  0,  0,   "Only enumerate indecomposable solutions.", 0},
 
     {"noCommander",  300,  0,  0,   "Don't use the commander encoding for the exactly one constraints.", 0},
     {"smallerEncoding",  301,  0,  0,   "Use an encoding that is optimized by propagating the information obtained by fixing the diagonal.", 0},
@@ -117,6 +119,9 @@ static  int parse_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
         }
+        case 201:
+            indecomp = true;
+            break;
 
         case 300:
             noCommander = true;
@@ -332,6 +337,9 @@ int main(int argc, char **argv)
 
             YBEClauses(&cnf, nextFree, cycset_lits, diag);
 
+            if(indecomp)
+                enforceNoFixedEntries(&cnf, diag, cycset_lits);
+
             // check if zero literal
             for (const auto& clause : cnf)
             {
@@ -397,6 +405,9 @@ int main(int argc, char **argv)
         encodeOrder(&cnf, diagonal, nextFreeVariable, geq_lits, cycset_lits);
         
     YBEClauses(&cnf,nextFreeVariable,cycset_lits,diagonal);
+
+    if(indecomp)
+        enforceNoFixedEntries(&cnf, diagonal, cycset_lits);
 
     // check if zero literal
     for (const auto& clause : cnf)

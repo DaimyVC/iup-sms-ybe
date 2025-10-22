@@ -23,9 +23,10 @@ MinCheck_V2::MinCheck_V2(){
     return;
 }
 
-MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits, order_t order){
+MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_lits, vector<vector<vector<lit_t>>> geq_lits, order_t order){
     this->order = order;
     this->cycset_lits=cycset_lits;
+    this->geq_lits=geq_lits;
     this->counter=breakCounter();
     diagIsId=true;
     this->diag=cyclePerm_t(diag);
@@ -62,11 +63,6 @@ MinCheck_V2::MinCheck_V2(vector<int> diag, vector<vector<vector<lit_t>>> cycset_
 
 
 void MinCheck_V2::MinCheck(cycle_set_t cycset){
-    if(logging>0){
-        printf("MINCHECK!!!!!!!\n");
-        printPartiallyDefinedCycleSet(cycset);
-        printDomains(cycset);
-    }
     this->cycset=cycset;
     //setCycleSet(cycset);
     if(incrMincheck){
